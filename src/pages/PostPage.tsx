@@ -68,7 +68,11 @@ export default function PostPage() {
           <p className="text-lg mt-2 whitespace-pre-wrap">{post.content}</p>
 
           {post.imageUrl && (
-            <img src={post.imageUrl} alt="" className="rounded-xl mt-2 max-h-96 w-full object-cover" />
+            post.imageUrl.includes("/video/upload/") ? (
+              <video src={post.imageUrl} className="rounded-xl mt-2 max-h-96 w-full" controls />
+            ) : (
+              <img src={post.imageUrl} alt="" className="rounded-xl mt-2 max-h-96 w-full object-cover" />
+            )
           )}
 
           <div className="flex gap-3 mt-3">

@@ -110,7 +110,11 @@ export default function YapCard({ post, onLikeToggle, onBookmarkToggle, onDelete
             </Link>
 
             {post.imageUrl && (
-              <img src={post.imageUrl} alt="" className="rounded-xl mt-2 max-h-96 w-full object-cover" />
+              post.imageUrl.includes("/video/upload/") ? (
+                <video src={post.imageUrl} className="rounded-xl mt-2 max-h-96 w-full" controls />
+              ) : (
+                <img src={post.imageUrl} alt="" className="rounded-xl mt-2 max-h-96 w-full object-cover" />
+              )
             )}
 
             <div className="flex gap-4 mt-2">

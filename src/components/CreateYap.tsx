@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { createPost } from "../api/postApi";
-import { uploadImage } from "../api/uploadApi";
-import { X, ImagePlus } from "lucide-react";
+import { uploadFile } from "../api/uploadApi";
+import { X, ImagePlus, Video } from "lucide-react";
 import toast from "react-hot-toast";
 import type { Post } from "../types";
 
@@ -11,8 +11,9 @@ interface CreateYapProps {
 
 export default function CreateYap({ onCreated }: CreateYapProps) {
   const [content, setContent] = useState("");
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [mediaIsVideo, setMediaIsVideo] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -21,13 +22,15 @@ export default function CreateYap({ onCreated }: CreateYapProps) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
+    setMediaFile(file);
+    setMediaPreview(URL.createObjectURL(file));
+    setMediaIsVideo(file.type.startsWith("video/"));
   };
 
-  const removeImage = () => {
-    setImageFile(null);
-    setImagePreview(null);
+  const removeMedia = () => {
+    setMediaFile(null);
+    setMediaPreview(null);
+    setMediaIsVideo(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -39,15 +42,15 @@ export default function CreateYap({ onCreated }: CreateYapProps) {
 
     try {
       let imageUrl: string | undefined;
-      if (imageFile) {
-        const uploadRes = await uploadImage(imageFile);
+      if (mediaFile) {
+        const uploadRes = await uploadFile(mediaFile);
         imageUrl = uploadRes.data.url;
       }
 
       const res = await createPost({ content, imageUrl });
       onCreated(res.data);
       setContent("");
-      removeImage();
+      removeMedia();
       toast.success("Yap posted!");
     } catch {
       toast.error("Failed to create yap.");
@@ -69,13 +72,17 @@ export default function CreateYap({ onCreated }: CreateYapProps) {
         rows={3}
       />
 
-      {imagePreview && (
+      {mediaPreview && (
         <div className="relative mt-2">
-          <img src={imagePreview} alt="Preview" className="rounded-xl max-h-64 w-full object-cover" />
+          {mediaIsVideo ? (
+            <video src={mediaPreview} className="rounded-xl max-h-64 w-full object-cover" controls />
+          ) : (
+            <img src={mediaPreview} alt="Preview" className="rounded-xl max-h-64 w-full object-cover" />
+          )}
           <button
             type="button"
             className="btn btn-circle btn-xs btn-error absolute top-2 right-2"
-            onClick={removeImage}
+            onClick={removeMedia}
           >
             <X className="w-4 h-4" />
           </button>
@@ -90,11 +97,12 @@ export default function CreateYap({ onCreated }: CreateYapProps) {
             onClick={() => fileInputRef.current?.click()}
           >
             <ImagePlus className="w-5 h-5" />
+            <Video className="w-5 h-5" />
           </button>
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept="image/*,video/*"
             onChange={handleFileChange}
             className="hidden"
           />

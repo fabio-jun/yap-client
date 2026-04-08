@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { getUserById, updateProfile } from "../api/userApi";
 import { getAllPosts } from "../api/postApi";
 import { toggleFollow, getFollowers, getFollowing } from "../api/followApi";
-import { uploadImage } from "../api/uploadApi";
+import { uploadFile } from "../api/uploadApi";
 import { useAuth } from "../contexts/AuthContext";
 import { X, LogOut, Pencil } from "lucide-react";
 import toast from "react-hot-toast";
@@ -85,7 +85,7 @@ export default function ProfilePage() {
 
     setUploading(true);
     try {
-      const uploadRes = await uploadImage(file);
+      const uploadRes = await uploadFile(file);
       const res = await updateProfile({
         userName: profile.userName,
         email: profile.email,
