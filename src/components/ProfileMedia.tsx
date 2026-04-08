@@ -1,20 +1,18 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { getPostsByUser } from "../api/postApi";
 import { Image } from "lucide-react";
 import type { Post } from "../types";
 
-export default function ProfileMedia() {
-  const { id } = useParams();
+export default function ProfileMedia({ userId }: { userId: number }) {
   const [mediaPosts, setMediaPosts] = useState<Post[]>([]);
 
   useEffect(() => {
-    const userId = Number(id);
     if (!userId) return;
     getPostsByUser(userId).then((res) => {
       setMediaPosts((res.data as Post[]).filter((p) => p.imageUrl));
     });
-  }, [id]);
+  }, [userId]);
 
   if (mediaPosts.length === 0) return null;
 

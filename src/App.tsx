@@ -35,7 +35,7 @@ function AppContent() {
         {user && (
           <aside className="hidden md:block w-72 shrink-0 p-4 sticky top-16 h-fit">
             <SuggestedUsers />
-            {profileMatch && <ProfileMedia />}
+            {profileMatch && <ProfileMedia userId={Number(profileMatch.params.id)} />}
           </aside>
         )}
       </div>
