@@ -1,11 +1,11 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { getUserById, updateProfile } from "../api/userApi";
-import { getAllPosts } from "../api/postApi";
+import { getPostsByUser } from "../api/postApi";
 import { toggleFollow, getFollowers, getFollowing } from "../api/followApi";
 import { uploadFile } from "../api/uploadApi";
 import { useAuth } from "../contexts/AuthContext";
-import { X, LogOut, Pencil } from "lucide-react";
+import { X, LogOut, Pencil, Image } from "lucide-react";
 import toast from "react-hot-toast";
 import YapCard from "../components/YapCard";
 import type { Post, User } from "../types";
@@ -23,6 +23,7 @@ export default function ProfilePage() {
   const [modalLoading, setModalLoading] = useState(false);
   const [editingBio, setEditingBio] = useState(false);
   const [bioText, setBioText] = useState("");
+  const [activeTab, setActiveTab] = useState<"yaps" | "media">("yaps");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const userId = Number(id);
@@ -31,10 +32,7 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!userId) return;
     getUserById(userId).then((res) => setProfile(res.data));
-    getAllPosts().then((res) => {
-      const userPosts = (res.data as Post[]).filter((p) => p.authorId === userId);
-      setPosts(userPosts);
-    });
+    getPostsByUser(userId).then((res) => setPosts(res.data));
   }, [userId]);
 
   const openModal = async (type: "followers" | "following") => {
@@ -222,12 +220,50 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {posts.length === 0 ? (
-        <p className="text-center text-base-content/50 py-8">No yaps yet.</p>
+      <div role="tablist" className="tabs tabs-bordered mb-4">
+        <button
+          role="tab"
+          className={`tab ${activeTab === "yaps" ? "tab-active" : ""}`}
+          onClick={() => setActiveTab("yaps")}
+        >
+          Yaps
+        </button>
+        <button
+          role="tab"
+          className={`tab ${activeTab === "media" ? "tab-active" : ""}`}
+          onClick={() => setActiveTab("media")}
+        >
+          <Image className="w-4 h-4 mr-1" /> Media
+        </button>
+      </div>
+
+      {activeTab === "yaps" ? (
+        posts.length === 0 ? (
+          <p className="text-center text-base-content/50 py-8">No yaps yet.</p>
+        ) : (
+          posts.map((post) => (
+            <YapCard key={post.id} post={post} onLikeToggle={handleLikeToggle} onDelete={handleDelete} />
+          ))
+        )
       ) : (
-        posts.map((post) => (
-          <YapCard key={post.id} post={post} onLikeToggle={handleLikeToggle} onDelete={handleDelete} />
-        ))
+        (() => {
+          const mediaPosts = posts.filter((p) => p.imageUrl);
+          return mediaPosts.length === 0 ? (
+            <p className="text-center text-base-content/50 py-8">No media yet.</p>
+          ) : (
+            <div className="grid grid-cols-3 gap-1">
+              {mediaPosts.map((post) => (
+                <Link key={post.id} to={`/post/${post.id}`} className="aspect-square overflow-hidden rounded-lg">
+                  {post.imageUrl!.includes("/video/upload/") ? (
+                    <video src={post.imageUrl} className="w-full h-full object-cover" muted />
+                  ) : (
+                    <img src={post.imageUrl} alt="" className="w-full h-full object-cover hover:opacity-80 transition-opacity" />
+                  )}
+                </Link>
+              ))}
+            </div>
+          );
+        })()
       )}
 
       {modalType && (

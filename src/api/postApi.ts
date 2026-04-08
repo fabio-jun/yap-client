@@ -4,6 +4,10 @@ export const getAllPosts = (params?: { search?: string; tag?: string; page?: num
   return api.get("/post", { params });
 };
 
+export const getPostsByUser = (userId: number) => {
+  return api.get(`/post/user/${userId}`);
+};
+
 export const getPostById = (id: number) => {
   return api.get(`/post/${id}`);
 };
