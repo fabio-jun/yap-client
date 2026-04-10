@@ -12,6 +12,6 @@ export const getSuggestedUsers = () => {
   return api.get("/users/suggested");
 };
 
-export const updateProfile = (data: { userName: string; email: string; profileImageUrl?: string; bio?: string }) => {
+export const updateProfile = (data: { userName: string; email: string; profileImageUrl?: string; displayName?: string; bio?: string }) => {
   return api.put("/users/me", data);
 };

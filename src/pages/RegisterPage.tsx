@@ -8,11 +8,13 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     try {
       await register(userName, email, password);
       toast.success("Account created!");
@@ -20,14 +22,20 @@ export default function RegisterPage() {
     } catch (err: any) {
       toast.error(err.response?.data?.error || "Failed to register.");
       setError(err.response?.data?.error || "Failed to register.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex justify-center mt-12">
+    <div className="flex justify-center mt-12 animate-fade-in-up">
       <div className="card bg-base-200 w-full max-w-sm">
         <div className="card-body">
-          <h1 className="text-2xl font-bold text-center mb-4">Register</h1>
+          <div className="text-center mb-2">
+            <span className="text-3xl font-extrabold text-primary tracking-tight">Yap</span>
+            <h1 className="text-xl font-bold mt-2">Create your account</h1>
+            <p className="text-sm text-base-content/50 mt-1">Start yapping in seconds</p>
+          </div>
           {error && <div className="alert alert-error text-sm">{error}</div>}
           <form onSubmit={handleSubmit}>
             <fieldset className="fieldset">
@@ -37,6 +45,7 @@ export default function RegisterPage() {
                 className="input input-bordered w-full"
                 value={userName}
                 onChange={(e) => setUserName(e.target.value)}
+                placeholder="Choose a username"
               />
               <label className="fieldset-label">Email</label>
               <input
@@ -44,6 +53,7 @@ export default function RegisterPage() {
                 className="input input-bordered w-full"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
               />
               <label className="fieldset-label">Password</label>
               <input
@@ -51,12 +61,15 @@ export default function RegisterPage() {
                 className="input input-bordered w-full"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                placeholder="Create a password"
               />
-              <button type="submit" className="btn btn-primary w-full mt-4">Register</button>
+              <button type="submit" className="btn btn-primary w-full mt-4" disabled={loading}>
+                {loading ? <span className="loading loading-spinner loading-sm"></span> : "Create account"}
+              </button>
             </fieldset>
           </form>
-          <p className="text-center text-sm mt-3">
-            Already have an account? <Link to="/login" className="link link-primary">Login</Link>
+          <p className="text-center text-sm mt-3 text-base-content/60">
+            Already have an account? <Link to="/login" className="text-primary font-semibold hover:underline">Sign in</Link>
           </p>
         </div>
       </div>

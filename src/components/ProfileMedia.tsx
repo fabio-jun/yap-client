@@ -17,17 +17,17 @@ export default function ProfileMedia({ userId }: { userId: number }) {
   if (mediaPosts.length === 0) return null;
 
   return (
-    <div className="card bg-base-200 p-4 mt-4">
+    <div className="card bg-base-200 p-4 mt-4 animate-fade-in">
       <h3 className="font-bold mb-3 flex items-center gap-2">
-        <Image className="w-4 h-4" /> Media
+        <Image className="w-4 h-4 text-primary" /> Media
       </h3>
-      <div className="grid grid-cols-3 gap-1">
+      <div className="grid grid-cols-3 gap-1.5">
         {mediaPosts.slice(0, 9).map((post) => (
-          <Link key={post.id} to={`/post/${post.id}`} className="aspect-square overflow-hidden rounded-lg">
+          <Link key={post.id} to={`/post/${post.id}`} className="aspect-square overflow-hidden rounded-lg cursor-pointer group">
             {post.imageUrl!.includes("/video/upload/") ? (
-              <video src={post.imageUrl} className="w-full h-full object-cover" muted />
+              <video src={post.imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" muted />
             ) : (
-              <img src={post.imageUrl} alt="" className="w-full h-full object-cover hover:opacity-80 transition-opacity" />
+              <img src={post.imageUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
             )}
           </Link>
         ))}

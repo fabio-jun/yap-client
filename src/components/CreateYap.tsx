@@ -17,7 +17,17 @@ export default function CreateYap({ onCreated }: CreateYapProps) {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const maxLength = 280;
+
+  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setContent(e.target.value);
+    const ta = textareaRef.current;
+    if (ta) {
+      ta.style.height = "auto";
+      ta.style.height = `${ta.scrollHeight}px`;
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -51,6 +61,7 @@ export default function CreateYap({ onCreated }: CreateYapProps) {
       onCreated(res.data);
       setContent("");
       removeMedia();
+      if (textareaRef.current) textareaRef.current.style.height = "auto";
       toast.success("Yap posted!");
     } catch {
       toast.error("Failed to create yap.");
@@ -60,20 +71,24 @@ export default function CreateYap({ onCreated }: CreateYapProps) {
   };
 
   const remaining = maxLength - content.length;
+  const progress = content.length / maxLength;
+  const circumference = 2 * Math.PI * 10;
+  const strokeDashoffset = circumference * (1 - progress);
 
   return (
     <form onSubmit={handleSubmit} className="card bg-base-200 p-4 mb-4">
       <textarea
-        className="textarea textarea-bordered w-full text-base resize-none"
+        ref={textareaRef}
+        className="textarea textarea-bordered w-full text-base resize-none overflow-hidden bg-transparent focus:bg-base-100/30 transition-colors"
         placeholder="What's happening?"
         value={content}
-        onChange={(e) => setContent(e.target.value)}
+        onChange={handleContentChange}
         maxLength={maxLength}
-        rows={3}
+        rows={2}
       />
 
       {mediaPreview && (
-        <div className="relative mt-2">
+        <div className="relative mt-2 animate-scale-in">
           {mediaIsVideo ? (
             <video src={mediaPreview} className="rounded-xl max-h-64 w-full object-cover" controls />
           ) : (
@@ -81,7 +96,7 @@ export default function CreateYap({ onCreated }: CreateYapProps) {
           )}
           <button
             type="button"
-            className="btn btn-circle btn-xs btn-error absolute top-2 right-2"
+            className="btn btn-circle btn-xs btn-error absolute top-2 right-2 shadow-lg"
             onClick={removeMedia}
           >
             <X className="w-4 h-4" />
@@ -93,8 +108,9 @@ export default function CreateYap({ onCreated }: CreateYapProps) {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="btn btn-ghost btn-sm"
+            className="btn btn-ghost btn-sm hover:text-primary transition-colors"
             onClick={() => fileInputRef.current?.click()}
+            aria-label="Add media"
           >
             <ImagePlus className="w-5 h-5" />
             <Video className="w-5 h-5" />
@@ -106,13 +122,29 @@ export default function CreateYap({ onCreated }: CreateYapProps) {
             onChange={handleFileChange}
             className="hidden"
           />
-          <span className={`text-sm ${remaining <= 20 ? "text-warning" : ""} ${remaining <= 0 ? "text-error" : "text-base-content/50"}`}>
-            {remaining}
-          </span>
+          {content.length > 0 && (
+            <div className="flex items-center gap-1.5 animate-fade-in">
+              <svg width="24" height="24" viewBox="0 0 24 24" className="-rotate-90">
+                <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="2" className="text-base-300" />
+                <circle
+                  cx="12" cy="12" r="10" fill="none" strokeWidth="2"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={strokeDashoffset}
+                  strokeLinecap="round"
+                  className={`transition-colors duration-200 ${remaining <= 0 ? "text-error" : remaining <= 20 ? "text-warning" : "text-primary"}`}
+                />
+              </svg>
+              {remaining <= 20 && (
+                <span className={`text-xs font-semibold ${remaining <= 0 ? "text-error" : "text-warning"}`}>
+                  {remaining}
+                </span>
+              )}
+            </div>
+          )}
         </div>
         <button
           type="submit"
-          className="btn btn-primary btn-sm"
+          className="btn btn-primary btn-sm shadow-sm shadow-primary/20 hover:shadow-primary/40 transition-shadow"
           disabled={!content.trim() || remaining < 0 || submitting}
         >
           {submitting ? <span className="loading loading-spinner loading-xs"></span> : "Yap"}

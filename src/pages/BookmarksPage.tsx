@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { getBookmarks } from "../api/bookmarkApi";
 import YapCard from "../components/YapCard";
+import YapSkeleton from "../components/YapSkeleton";
+import EmptyState from "../components/EmptyState";
+import { Bookmark } from "lucide-react";
 import type { Post } from "../types";
 
 export default function BookmarksPage() {
@@ -33,25 +36,29 @@ export default function BookmarksPage() {
   };
 
   return (
-    <div>
+    <div className="animate-fade-in">
       <h1 className="text-xl font-bold p-4 border-b border-base-300">Bookmarks</h1>
-      {loading && (
-        <div className="flex justify-center py-8">
-          <span className="loading loading-spinner loading-md"></span>
+      {loading ? (
+        <div className="mt-3"><YapSkeleton count={3} /></div>
+      ) : posts.length === 0 ? (
+        <EmptyState
+          icon={<Bookmark className="w-12 h-12" />}
+          title="No bookmarks yet"
+          description="Save yaps to read them later."
+        />
+      ) : (
+        <div className="mt-3">
+          {posts.map((post) => (
+            <YapCard
+              key={post.id}
+              post={post}
+              onLikeToggle={handleLikeToggle}
+              onBookmarkToggle={handleBookmarkToggle}
+              onDelete={handleDelete}
+            />
+          ))}
         </div>
       )}
-      {!loading && posts.length === 0 && (
-        <p className="text-center text-base-content/50 py-8">No bookmarks yet.</p>
-      )}
-      {posts.map((post) => (
-        <YapCard
-          key={post.id}
-          post={post}
-          onLikeToggle={handleLikeToggle}
-          onBookmarkToggle={handleBookmarkToggle}
-          onDelete={handleDelete}
-        />
-      ))}
     </div>
   );
 }

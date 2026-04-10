@@ -15,6 +15,7 @@ export interface Post {
 export interface User {
   id: number;
   userName: string;
+  displayName?: string;
   email: string;
   role: string;
   createdAt: string;
@@ -38,6 +39,26 @@ export interface PagedResponse<T> {
   pageSize: number;
   totalCount: number;
   totalPages: number;
+}
+
+export interface DirectMessage {
+  id: number;
+  content: string;
+  createdAt: string;
+  senderId: number;
+  senderName: string;
+  senderProfileImageUrl?: string;
+  receiverId: number;
+  receiverName: string;
+  receiverProfileImageUrl?: string;
+}
+
+export interface ConversationPreview {
+  userId: number;
+  userName: string;
+  profileImageUrl?: string;
+  lastMessageContent: string;
+  lastMessageDate: string;
 }
 
 export interface AuthUser {

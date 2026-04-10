@@ -11,6 +11,8 @@ import SearchPage from "./pages/SearchPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import BookmarksPage from "./pages/BookmarksPage";
+import MessagesPage from "./pages/MessagesPage";
+import ConversationPage from "./pages/ConversationPage";
 
 function AppContent() {
   const { user } = useAuth();
@@ -27,6 +29,8 @@ function AppContent() {
             <Route path="/post/:id" element={<PostPage />} />
             <Route path="/profile/:id" element={<ProfilePage />} />
             <Route path="/bookmarks" element={<BookmarksPage />} />
+            <Route path="/messages" element={<MessagesPage />} />
+            <Route path="/messages/:userId" element={<ConversationPage />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
@@ -51,8 +55,9 @@ export default function App() {
         <Toaster
           position="bottom-center"
           toastOptions={{
-            style: { background: "#1e293b", color: "#f8fafc", borderRadius: "0.5rem" },
+            className: "!bg-base-300 !text-base-content !shadow-lg",
             duration: 2000,
+            style: { borderRadius: "0.75rem" },
           }}
         />
       </AuthProvider>
