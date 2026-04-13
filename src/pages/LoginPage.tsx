@@ -27,42 +27,65 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex justify-center mt-12 animate-fade-in-up">
-      <div className="card bg-base-200 w-full max-w-sm">
-        <div className="card-body">
-          <div className="text-center mb-2">
-            <span className="text-3xl font-extrabold text-primary tracking-tight">Yap</span>
-            <h1 className="text-xl font-bold mt-2">Welcome back</h1>
-            <p className="text-sm text-base-content/50 mt-1">Sign in to your account</p>
-          </div>
-          {error && <div className="alert alert-error text-sm">{error}</div>}
-          <form onSubmit={handleSubmit}>
-            <fieldset className="fieldset">
-              <label className="fieldset-label">Email</label>
-              <input
-                type="email"
-                className="input input-bordered w-full"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-              />
-              <label className="fieldset-label">Password</label>
-              <input
-                type="password"
-                className="input input-bordered w-full"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Your password"
-              />
-              <button type="submit" className="btn btn-primary w-full mt-4" disabled={loading}>
-                {loading ? <span className="loading loading-spinner loading-sm"></span> : "Sign in"}
-              </button>
-            </fieldset>
-          </form>
-          <p className="text-center text-sm mt-3 text-base-content/60">
-            Don't have an account? <Link to="/register" className="text-primary font-semibold hover:underline">Register</Link>
-          </p>
+    <div className="min-h-screen flex items-center justify-center px-4 py-12 animate-fade-in-up">
+      <div className="w-full max-w-sm">
+        <div className="mb-10 text-center">
+          <span className="text-5xl font-extrabold tracking-tighter text-base-content">
+            Yap<span className="text-primary">.</span>
+          </span>
+          <p className="mt-3 text-base-content/50 text-sm">Welcome back. Sign in to continue.</p>
         </div>
+
+        {error && <div className="alert alert-error text-sm mb-4">{error}</div>}
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-base-content/70" htmlFor="email">
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              className="input input-bordered w-full bg-base-200/50 focus:bg-base-100 transition-colors"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-base-content/70" htmlFor="password">
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              className="input input-bordered w-full bg-base-200/50 focus:bg-base-100 transition-colors"
+              placeholder="Your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              autoComplete="current-password"
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="btn btn-primary w-full mt-2 font-semibold"
+            disabled={loading}
+          >
+            {loading ? <span className="loading loading-spinner loading-sm" /> : "Sign in"}
+          </button>
+        </form>
+
+        <p className="mt-6 text-center text-sm text-base-content/50">
+          No account?{" "}
+          <Link to="/register" className="text-primary font-semibold hover:underline">
+            Get started
+          </Link>
+        </p>
       </div>
     </div>
   );

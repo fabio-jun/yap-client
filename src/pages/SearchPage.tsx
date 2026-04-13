@@ -12,30 +12,50 @@ export default function SearchPage() {
   const [searchParams] = useSearchParams();
   const query = searchParams.get("q") || "";
   const tag = searchParams.get("tag") || "";
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
   const [tab, setTab] = useState<"yaps" | "users">("yaps");
-  const [loading, setLoading] = useState(true);
+  const activeKey = `${tag}:${query}`;
+  const hasSearch = Boolean(tag || query);
+  const [results, setResults] = useState<{
+    key: string;
+    posts: Post[];
+    users: User[];
+  }>({ key: "", posts: [], users: [] });
+  const loading = hasSearch && results.key !== activeKey;
+  const posts = hasSearch ? results.posts : [];
+  const users = hasSearch ? results.users : [];
 
   useEffect(() => {
-    setLoading(true);
+    let cancelled = false;
+
     if (tag) {
-      getAllPosts({ tag }).then((res) => { setPosts(res.data); setLoading(false); });
-      setUsers([]);
+      getAllPosts({ tag }).then((res) => {
+        if (!cancelled) {
+          setResults({ key: activeKey, posts: res.data, users: [] });
+        }
+      });
     } else if (query) {
       Promise.all([
-        getAllPosts({ search: query }).then((res) => setPosts(res.data)),
-        searchUsers(query).then((res) => setUsers(res.data)).catch(() => setUsers([])),
-      ]).finally(() => setLoading(false));
+        getAllPosts({ search: query }).then((res) => res.data),
+        searchUsers(query).then((res) => res.data).catch(() => []),
+      ]).then(([postsData, usersData]) => {
+        if (!cancelled) {
+          setResults({ key: activeKey, posts: postsData, users: usersData });
+        }
+      });
     }
-  }, [query, tag]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeKey, query, tag]);
 
   const handleLikeToggle = (postId: number, liked: boolean, count: number) => {
-    setPosts((prev) =>
-      prev.map((p) =>
+    setResults((prev) => ({
+      ...prev,
+      posts: prev.posts.map((p) =>
         p.id === postId ? { ...p, hasLiked: liked, likeCount: count } : p
-      )
-    );
+      ),
+    }));
   };
 
   const title = tag ? (
