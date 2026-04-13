@@ -10,6 +10,22 @@ export interface Post {
   likeCount: number;
   hasLiked: boolean;
   hasBookmarked: boolean;
+  repostCount: number;
+  hasReposted: boolean;
+  isRepost: boolean;
+  repostId?: number;
+  repostedByUserId?: number;
+  repostedByUserName?: string;
+  repostedByProfileImageUrl?: string;
+  repostedAt?: string;
+  quoteContent?: string;
+  originalPostId: number;
+  mentionedUsers: MentionedUser[];
+}
+
+export interface MentionedUser {
+  userId: number;
+  userName: string;
 }
 
 export interface User {
@@ -31,6 +47,9 @@ export interface Comment {
   createdAt: string;
   authorId: number;
   authorName: string;
+  parentCommentId?: number;
+  replies: Comment[];
+  mentionedUsers: MentionedUser[];
 }
 
 export interface PagedResponse<T> {
