@@ -1,16 +1,8 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { useState, useEffect, useCallback, type ReactNode } from "react";
 import { loginUser, registerUser } from "../api/authApi";
 import api from "../api/axiosInstance";
+import { AuthContext } from "./AuthContextValue";
 import type { AuthUser } from "../types";
-
-interface AuthContextType {
-  user: AuthUser | null;
-  login: (email: string, password: string) => Promise<void>;
-  register: (userName: string, email: string, password: string) => Promise<void>;
-  logout: () => void;
-}
-
-const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
 function parseJwt(token: string): { user: AuthUser; exp: number } {
   const base64Url = token.split(".")[1];
@@ -86,5 +78,3 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     </AuthContext.Provider>
   );
 }
-
-export const useAuth = () => useContext(AuthContext);

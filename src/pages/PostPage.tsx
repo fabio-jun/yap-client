@@ -2,11 +2,102 @@ import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { getPostById, deletePost } from "../api/postApi";
 import { toggleLike } from "../api/likeApi";
-import { getCommentsByPost, createComment, deleteComment } from "../api/commentApi";
-import { useAuth } from "../contexts/AuthContext";
-import { Heart, Trash2, Send } from "lucide-react";
+import { getCommentsByPost, createComment, createReply, deleteComment } from "../api/commentApi";
+import { useAuth } from "../hooks/useAuth";
+import { Heart, Trash2, Send, Reply } from "lucide-react";
 import ConfirmModal from "../components/ConfirmModal";
 import type { Post, Comment } from "../types";
+import { renderContent } from "../utils/renderContent";
+
+interface CommentItemProps {
+  comment: Comment;
+  postId: number;
+  user: ReturnType<typeof useAuth>["user"];
+  depth?: number;
+  onReplyCreated: (parentId: number, reply: Comment) => void;
+  onConfirmDelete: (commentId: number) => void;
+}
+
+function CommentItem({ comment, postId, user, depth = 0, onReplyCreated, onConfirmDelete }: CommentItemProps) {
+  const [replyOpen, setReplyOpen] = useState(false);
+  const [replyContent, setReplyContent] = useState("");
+
+  const handleReply = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!replyContent.trim()) return;
+    const res = await createReply(postId, comment.id, { content: replyContent });
+    onReplyCreated(comment.id, res.data);
+    setReplyContent("");
+    setReplyOpen(false);
+  };
+
+  return (
+    <div className={depth > 0 ? "ml-4 pl-3 border-l border-base-300" : ""}>
+      <div className="bg-base-300/50 rounded-xl p-3 transition-colors hover:bg-base-300">
+        <div className="flex justify-between items-center mb-1.5">
+          <Link to={`/profile/${comment.authorId}`} className="font-semibold text-sm hover:text-primary transition-colors">
+            @{comment.authorName}
+          </Link>
+          <span className="text-xs text-base-content/40">
+            {new Date(comment.createdAt).toLocaleDateString()}
+          </span>
+        </div>
+        <p className="text-sm leading-relaxed">{renderContent(comment.content, comment.mentionedUsers)}</p>
+        {user && (
+          <div className="flex gap-1 mt-1.5">
+            <button
+              type="button"
+              className="btn btn-ghost btn-xs text-base-content/40 hover:text-primary gap-1 transition-colors"
+              onClick={() => setReplyOpen((open) => !open)}
+            >
+              <Reply className="w-3 h-3" /> Reply
+            </button>
+            {(String(comment.authorId) === user.id || user.role === "Admin") && (
+              <button
+                type="button"
+                className="btn btn-ghost btn-xs text-base-content/30 hover:text-error gap-1 transition-colors"
+                onClick={() => onConfirmDelete(comment.id)}
+              >
+                <Trash2 className="w-3 h-3" /> Delete
+              </button>
+            )}
+          </div>
+        )}
+
+        {replyOpen && (
+          <form onSubmit={handleReply} className="flex gap-2 mt-2">
+            <input
+              type="text"
+              className="input input-bordered input-sm flex-1 bg-base-100/50"
+              placeholder={`Reply to @${comment.authorName}`}
+              value={replyContent}
+              onChange={(e) => setReplyContent(e.target.value)}
+            />
+            <button type="submit" className="btn btn-primary btn-sm" disabled={!replyContent.trim()}>
+              <Send className="w-4 h-4" />
+            </button>
+          </form>
+        )}
+      </div>
+
+      {comment.replies?.length > 0 && (
+        <div className="mt-2 space-y-2">
+          {comment.replies.map((reply) => (
+            <CommentItem
+              key={reply.id}
+              comment={reply}
+              postId={postId}
+              user={user}
+              depth={depth + 1}
+              onReplyCreated={onReplyCreated}
+              onConfirmDelete={onConfirmDelete}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function PostPage() {
   const { id } = useParams();
@@ -39,9 +130,26 @@ export default function PostPage() {
     setNewComment("");
   };
 
+  const addReplyToTree = (items: Comment[], parentId: number, reply: Comment): Comment[] =>
+    items.map((item) => {
+      if (item.id === parentId) {
+        return { ...item, replies: [...(item.replies || []), reply] };
+      }
+      return { ...item, replies: addReplyToTree(item.replies || [], parentId, reply) };
+    });
+
+  const removeCommentFromTree = (items: Comment[], commentId: number): Comment[] =>
+    items
+      .filter((item) => item.id !== commentId)
+      .map((item) => ({ ...item, replies: removeCommentFromTree(item.replies || [], commentId) }));
+
+  const handleReplyCreated = (parentId: number, reply: Comment) => {
+    setComments((prev) => addReplyToTree(prev, parentId, reply));
+  };
+
   const handleDeleteComment = async (commentId: number) => {
     await deleteComment(postId, commentId);
-    setComments(comments.filter((c) => c.id !== commentId));
+    setComments((prev) => removeCommentFromTree(prev, commentId));
     setConfirmDelete(null);
   };
 
@@ -111,7 +219,7 @@ export default function PostPage() {
             </span>
           </div>
 
-          <p className="text-lg mt-3 whitespace-pre-wrap leading-relaxed">{post.content}</p>
+          <p className="text-lg mt-3 whitespace-pre-wrap leading-relaxed">{renderContent(post.content, post.mentionedUsers)}</p>
 
           {post.imageUrl && (
             post.imageUrl.includes("/video/upload/") ? (
@@ -172,25 +280,14 @@ export default function PostPage() {
           ) : (
             <div className="space-y-3">
               {comments.map((comment) => (
-                <div key={comment.id} className="bg-base-300/50 rounded-xl p-3 transition-colors hover:bg-base-300">
-                  <div className="flex justify-between items-center mb-1.5">
-                    <Link to={`/profile/${comment.authorId}`} className="font-semibold text-sm hover:text-primary transition-colors">
-                      @{comment.authorName}
-                    </Link>
-                    <span className="text-xs text-base-content/40">
-                      {new Date(comment.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <p className="text-sm leading-relaxed">{comment.content}</p>
-                  {user && (String(comment.authorId) === user.id || user.role === "Admin") && (
-                    <button
-                      className="btn btn-ghost btn-xs text-base-content/30 hover:text-error mt-1.5 gap-1 transition-colors"
-                      onClick={() => setConfirmDelete(comment.id)}
-                    >
-                      <Trash2 className="w-3 h-3" /> Delete
-                    </button>
-                  )}
-                </div>
+                <CommentItem
+                  key={comment.id}
+                  comment={comment}
+                  postId={postId}
+                  user={user}
+                  onReplyCreated={handleReplyCreated}
+                  onConfirmDelete={(commentId) => setConfirmDelete(commentId)}
+                />
               ))}
             </div>
           )}

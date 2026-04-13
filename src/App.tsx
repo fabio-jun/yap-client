@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, useMatch } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
-import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { AuthProvider } from "./contexts/AuthContext";
+import { useAuth } from "./hooks/useAuth";
 import Navbar from "./components/Navbar";
 import SuggestedUsers from "./components/SuggestedUsers";
 import ProfileMedia from "./components/ProfileMedia";
@@ -13,6 +14,8 @@ import RegisterPage from "./pages/RegisterPage";
 import BookmarksPage from "./pages/BookmarksPage";
 import MessagesPage from "./pages/MessagesPage";
 import ConversationPage from "./pages/ConversationPage";
+import NotificationsPage from "./pages/NotificationsPage";
+import AdminReportsPage from "./pages/AdminReportsPage";
 
 function AppContent() {
   const { user } = useAuth();
@@ -22,8 +25,8 @@ function AppContent() {
     <>
       <Navbar />
       <div className={`mx-auto flex ${user ? "max-w-7xl" : "max-w-xl justify-center"}`}>
-        {user && <div className="w-16 md:w-56 shrink-0" />}
-        <main className={`w-full max-w-xl p-4 ${user ? "mx-auto" : ""}`}>
+        {user && <div className="hidden md:block w-56 shrink-0" />}
+        <main className={`w-full max-w-xl p-4 ${user ? "mx-auto pb-24 md:pb-4" : ""}`}>
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/post/:id" element={<PostPage />} />
@@ -31,6 +34,8 @@ function AppContent() {
             <Route path="/bookmarks" element={<BookmarksPage />} />
             <Route path="/messages" element={<MessagesPage />} />
             <Route path="/messages/:userId" element={<ConversationPage />} />
+            <Route path="/notifications" element={<NotificationsPage />} />
+            <Route path="/admin/reports" element={<AdminReportsPage />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />

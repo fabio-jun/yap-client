@@ -1,63 +1,101 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import { getAllPosts, getFeed } from "../api/postApi";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import YapCard from "../components/YapCard";
 import CreateYap from "../components/CreateYap";
 import YapSkeleton from "../components/YapSkeleton";
 import EmptyState from "../components/EmptyState";
-import { MessageCircle, Users, ArrowUp, Mail, Zap } from "lucide-react";
+import { Footer2 } from "../components/ui/Footer2";
+import { MessageCircle, Users, ArrowUp, Mail, Repeat2 } from "lucide-react";
 import type { Post, PagedResponse } from "../types";
 
 const PAGE_SIZE = 10;
 
+const LANDING_FEATURES = [
+  {
+    icon: MessageCircle,
+    title: "Yap away",
+    description: "Post up to 280 characters, short enough to say something real.",
+  },
+  {
+    icon: Users,
+    title: "Follow people",
+    description: "Build a feed that reflects your personality.",
+  },
+  {
+    icon: Mail,
+    title: "Direct messages",
+    description: "Private conversations, without limits.",
+  },
+  {
+    icon: Repeat2,
+    title: "Re-yap & quote",
+    description: "React with your own takes.",
+  },
+];
+
 function LandingPage() {
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-[80vh] text-center px-4 animate-fade-in-up">
-      {/* Hero */}
-      <div className="mb-8">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
-          <Zap className="w-4 h-4" />
-          Join the conversation
+    <div className="flex min-h-[calc(100vh-4rem)] animate-fade-in-up items-center justify-center">
+      <div className="flex flex-col justify-center flex-1 px-8 md:px-14 lg:px-20 py-16">
+        <div className="mb-8">
+          <span className="block text-7xl sm:text-8xl lg:text-9xl font-extrabold text-base-content tracking-tighter leading-none select-none">
+            Yap<span className="text-primary">.</span>
+          </span>
         </div>
-        <h1 className="text-7xl font-extrabold text-primary mb-3 tracking-tighter leading-none">
-          Yap
-        </h1>
-        <p className="text-xl text-base-content/60 max-w-sm leading-relaxed">
-          Share your thoughts. Connect with people. Keep it short.
+
+        <p className="text-xl md:text-2xl text-base-content/55 font-medium leading-relaxed max-w-[22ch] mb-10">
+          Say things.
+          <br />
+          Find people.
+          <br />
         </p>
+
+        <div className="flex flex-col sm:flex-row gap-3 max-w-[20rem]">
+          <Link
+            to="/register"
+            className="btn btn-primary btn-lg flex-1 font-semibold tracking-tight"
+          >
+            Get started
+          </Link>
+          <Link
+            to="/login"
+            className="btn btn-ghost btn-lg flex-1 border border-base-300 font-medium"
+          >
+            Sign in
+          </Link>
+        </div>
       </div>
 
-      {/* CTA */}
-      <div className="flex flex-col sm:flex-row gap-3 w-full max-w-xs">
-        <Link to="/register" className="btn btn-primary btn-lg flex-1 shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-shadow">
-          Get started
-        </Link>
-        <Link to="/login" className="btn btn-ghost btn-lg flex-1 border border-base-300">
-          Sign in
-        </Link>
+      <div className="hidden md:flex flex-col justify-center w-72 lg:w-[22rem] shrink-0 border-l border-base-300/40 px-8 py-16 animate-stagger">
+        {LANDING_FEATURES.map(({ icon: Icon, title, description }) => (
+          <div
+            key={title}
+            className="flex gap-4 py-5 border-b border-base-200 last:border-b-0"
+          >
+            <Icon className="w-4 h-4 shrink-0 mt-1 text-primary" />
+            <div>
+              <div className="font-semibold text-sm text-base-content leading-tight">
+                {title}
+              </div>
+              <div className="text-xs text-base-content/50 mt-1 leading-relaxed">
+                {description}
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* Features */}
-      <div className="grid grid-cols-3 gap-8 mt-20 animate-stagger">
-        <div className="flex flex-col items-center gap-3 group">
-          <div className="p-3 rounded-2xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-content transition-colors duration-300">
-            <MessageCircle className="w-6 h-6" />
-          </div>
-          <span className="text-sm font-medium text-base-content/60">Yap away</span>
-        </div>
-        <div className="flex flex-col items-center gap-3 group">
-          <div className="p-3 rounded-2xl bg-secondary/10 text-secondary group-hover:bg-secondary group-hover:text-secondary-content transition-colors duration-300">
-            <Users className="w-6 h-6" />
-          </div>
-          <span className="text-sm font-medium text-base-content/60">Follow people</span>
-        </div>
-        <div className="flex flex-col items-center gap-3 group">
-          <div className="p-3 rounded-2xl bg-accent/10 text-accent group-hover:bg-accent group-hover:text-accent-content transition-colors duration-300">
-            <Mail className="w-6 h-6" />
-          </div>
-          <span className="text-sm font-medium text-base-content/60">Direct messages</span>
-        </div>
+      <div className="fixed bottom-0 left-0 right-0 z-10">
+        <Footer2 />
       </div>
     </div>
   );
@@ -161,6 +199,14 @@ export default function HomePage() {
     setPosts((prev) => prev.filter((p) => p.id !== postId));
   };
 
+  const handleRepostToggle = (postId: number, reposted: boolean, count: number) => {
+    setPosts((prev) =>
+      prev.map((p) =>
+        p.id === postId ? { ...p, hasReposted: reposted, repostCount: count } : p
+      )
+    );
+  };
+
   const handleCreated = (newPost: Post) => {
     setPosts((prev) => [newPost, ...prev]);
   };
@@ -187,7 +233,14 @@ export default function HomePage() {
       ) : (
         <div className="animate-fade-in">
           {posts.map((post) => (
-            <YapCard key={post.id} post={post} onLikeToggle={handleLikeToggle} onBookmarkToggle={handleBookmarkToggle} onDelete={handleDelete} />
+            <YapCard
+              key={post.isRepost ? `repost-${post.repostId}` : `post-${post.id}`}
+              post={post}
+              onLikeToggle={handleLikeToggle}
+              onBookmarkToggle={handleBookmarkToggle}
+              onDelete={handleDelete}
+              onRepostToggle={handleRepostToggle}
+            />
           ))}
         </div>
       )}

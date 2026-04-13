@@ -4,10 +4,13 @@ import { getUserById, updateProfile } from "../api/userApi";
 import { getPostsByUser } from "../api/postApi";
 import { toggleFollow, getFollowers, getFollowing } from "../api/followApi";
 import { uploadFile } from "../api/uploadApi";
-import { useAuth } from "../contexts/AuthContext";
-import { X, LogOut, Mail, Camera } from "lucide-react";
+import { blockUser, getBlockState, unblockUser } from "../api/blockApi";
+import { useAuth } from "../hooks/useAuth";
+import { X, LogOut, Mail, Camera, Ban, Flag } from "lucide-react";
 import toast from "react-hot-toast";
 import YapCard from "../components/YapCard";
+import ConfirmModal from "../components/ConfirmModal";
+import ReportModal from "../components/ReportModal";
 import type { Post, User } from "../types";
 
 export default function ProfilePage() {
@@ -26,6 +29,9 @@ export default function ProfilePage() {
   const [editImageUrl, setEditImageUrl] = useState("");
   const [editUploading, setEditUploading] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [confirmBlock, setConfirmBlock] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const editFileRef = useRef<HTMLInputElement>(null);
 
   const userId = Number(id);
@@ -35,7 +41,14 @@ export default function ProfilePage() {
     if (!userId) return;
     getUserById(userId).then((res) => setProfile(res.data));
     getPostsByUser(userId).then((res) => setPosts(res.data));
-  }, [userId]);
+    if (authUser && String(userId) !== authUser.id) {
+      getBlockState(userId)
+        .then((res) => setIsBlocked(res.data.blocked))
+        .catch(() => setIsBlocked(false));
+    } else {
+      setIsBlocked(false);
+    }
+  }, [authUser, userId]);
 
   const openEditModal = () => {
     if (!profile) return;
@@ -94,6 +107,7 @@ export default function ProfilePage() {
   };
 
   const handleFollow = async () => {
+    if (isBlocked) return;
     const res = await toggleFollow(userId);
     setIsFollowing(res.data.following);
     toast(res.data.following ? "Followed!" : "Unfollowed");
@@ -102,6 +116,32 @@ export default function ProfilePage() {
         ...profile,
         followersCount: profile.followersCount + (res.data.following ? 1 : -1),
       });
+    }
+  };
+
+  const handleBlock = async () => {
+    try {
+      await blockUser(userId);
+      setIsBlocked(true);
+      setIsFollowing(false);
+      setPosts([]);
+      toast.success("User blocked.");
+    } catch {
+      toast.error("Could not block user.");
+    } finally {
+      setConfirmBlock(false);
+    }
+  };
+
+  const handleUnblock = async () => {
+    try {
+      await unblockUser(userId);
+      setIsBlocked(false);
+      const res = await getPostsByUser(userId);
+      setPosts(res.data);
+      toast.success("User unblocked.");
+    } catch {
+      toast.error("Could not unblock user.");
     }
   };
 
@@ -115,6 +155,14 @@ export default function ProfilePage() {
 
   const handleDelete = (postId: number) => {
     setPosts((prev) => prev.filter((p) => p.id !== postId));
+  };
+
+  const handleRepostToggle = (postId: number, reposted: boolean, count: number) => {
+    setPosts((prev) =>
+      prev.map((p) =>
+        p.id === postId ? { ...p, hasReposted: reposted, repostCount: count } : p
+      )
+    );
   };
 
   if (!profile) return (
@@ -212,28 +260,72 @@ export default function ProfilePage() {
           )}
 
           {authUser && !isOwnProfile && (
-            <div className="flex gap-2 mt-3">
+            <div className="flex flex-wrap justify-center gap-2 mt-3">
               <button
                 className={`btn btn-sm ${isFollowing ? "btn-outline" : "btn-primary shadow-lg shadow-primary/20"}`}
                 onClick={handleFollow}
+                disabled={isBlocked}
               >
                 {isFollowing ? "Unfollow" : "Follow"}
               </button>
-              <Link to={`/messages/${userId}`} className="btn btn-ghost btn-sm gap-1">
+              <Link
+                to={`/messages/${userId}`}
+                className={`btn btn-ghost btn-sm gap-1 ${isBlocked ? "btn-disabled" : ""}`}
+              >
                 <Mail className="w-4 h-4" /> Message
               </Link>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm gap-1 text-base-content/60 hover:text-error"
+                onClick={() => setReportOpen(true)}
+              >
+                <Flag className="w-4 h-4" /> Report
+              </button>
+              <button
+                type="button"
+                className={`btn btn-sm gap-1 ${isBlocked ? "btn-outline" : "btn-ghost text-base-content/60 hover:text-error"}`}
+                onClick={() => (isBlocked ? handleUnblock() : setConfirmBlock(true))}
+              >
+                <Ban className="w-4 h-4" /> {isBlocked ? "Unblock" : "Block"}
+              </button>
             </div>
           )}
         </div>
       </div>
 
-      {posts.length === 0 ? (
+      {isBlocked ? (
+        <div className="text-center py-10 px-4">
+          <Ban className="w-8 h-8 mx-auto mb-3 text-base-content/30" />
+          <p className="font-semibold">Blocked</p>
+          <p className="text-sm text-base-content/50 mt-1">Yaps from this account are hidden.</p>
+        </div>
+      ) : posts.length === 0 ? (
         <p className="text-center text-base-content/40 py-8 text-sm">No yaps yet.</p>
       ) : (
         posts.map((post) => (
-          <YapCard key={post.id} post={post} onLikeToggle={handleLikeToggle} onDelete={handleDelete} />
+          <YapCard
+            key={post.isRepost ? `repost-${post.repostId}` : `post-${post.id}`}
+            post={post}
+            onLikeToggle={handleLikeToggle}
+            onDelete={handleDelete}
+            onRepostToggle={handleRepostToggle}
+          />
         ))
       )}
+
+      <ConfirmModal
+        open={confirmBlock}
+        title="Block this user?"
+        description="Their yaps will be hidden from your feed."
+        onConfirm={handleBlock}
+        onCancel={() => setConfirmBlock(false)}
+      />
+
+      <ReportModal
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        reportedUserId={userId}
+      />
 
       {/* Edit Profile Modal */}
       {editOpen && (

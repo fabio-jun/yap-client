@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { getConversation, sendMessage, deleteMessage } from "../api/messageApi";
 import { getUserById } from "../api/userApi";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import { ArrowLeft, Send, Trash2 } from "lucide-react";
 import ConfirmModal from "../components/ConfirmModal";
 import type { DirectMessage, User } from "../types";
