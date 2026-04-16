@@ -225,7 +225,7 @@ export default function PostPage() {
             post.imageUrl.includes("/video/upload/") ? (
               <video src={post.imageUrl} className="rounded-xl mt-3 max-h-96 w-full" controls />
             ) : (
-              <img src={post.imageUrl} alt="" className="rounded-xl mt-3 max-h-96 w-full object-cover" />
+              <img src={post.imageUrl} alt="" className="rounded-xl mt-3 max-h-96 w-full object-contain" />
             )
           )}
 

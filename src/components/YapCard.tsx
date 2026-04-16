@@ -215,7 +215,7 @@ export default function YapCard({ post, onLikeToggle, onBookmarkToggle, onDelete
                     {post.imageUrl.includes("/video/upload/") ? (
                       <video src={post.imageUrl} className="rounded-lg max-h-48 w-full" controls onClick={(e) => e.preventDefault()} />
                     ) : (
-                      <img src={post.imageUrl} alt="" className="rounded-lg max-h-48 w-full object-cover" />
+                      <img src={post.imageUrl} alt="" className="rounded-lg max-h-48 w-full object-contain" />
                     )}
                   </div>
                 )}
@@ -267,7 +267,7 @@ export default function YapCard({ post, onLikeToggle, onBookmarkToggle, onDelete
                     {post.imageUrl.includes("/video/upload/") ? (
                       <video src={post.imageUrl} className="rounded-xl max-h-96 w-full" controls onClick={(e) => e.preventDefault()} />
                     ) : (
-                      <img src={post.imageUrl} alt="" className="rounded-xl max-h-96 w-full object-cover hover:brightness-90 transition-all duration-200" />
+                      <img src={post.imageUrl} alt="" className="rounded-xl max-h-96 w-full object-contain hover:brightness-90 transition-all duration-200" />
                     )}
                   </Link>
                 )}
