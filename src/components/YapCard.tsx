@@ -12,6 +12,7 @@ import LikedByModal from "./LikedByModal";
 import ReportModal from "./ReportModal";
 import type { Post } from "../types";
 import { renderContent } from "../utils/renderContent";
+import { isVideoUrl } from "../utils/isVideoUrl";
 
 interface YapCardProps {
   post: Post;
@@ -212,7 +213,7 @@ export default function YapCard({ post, onLikeToggle, onBookmarkToggle, onDelete
                 </p>
                 {post.imageUrl && (
                   <div className="mt-2">
-                    {post.imageUrl.includes("/video/upload/") ? (
+                    {isVideoUrl(post.imageUrl) ? (
                       <video src={post.imageUrl} className="rounded-lg max-h-48 w-full" controls onClick={(e) => e.preventDefault()} />
                     ) : (
                       <img src={post.imageUrl} alt="" className="rounded-lg max-h-48 w-full object-contain" />
@@ -264,7 +265,7 @@ export default function YapCard({ post, onLikeToggle, onBookmarkToggle, onDelete
                 </Link>
                 {post.imageUrl && (
                   <Link to={`/post/${post.id}`} className="block mt-2">
-                    {post.imageUrl.includes("/video/upload/") ? (
+                    {isVideoUrl(post.imageUrl) ? (
                       <video src={post.imageUrl} className="rounded-xl max-h-96 w-full" controls onClick={(e) => e.preventDefault()} />
                     ) : (
                       <img src={post.imageUrl} alt="" className="rounded-xl max-h-96 w-full object-contain hover:brightness-90 transition-all duration-200" />

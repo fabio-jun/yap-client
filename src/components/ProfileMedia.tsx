@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { getPostsByUser } from "../api/postApi";
 import { Image } from "lucide-react";
 import type { Post } from "../types";
+import { isVideoUrl } from "../utils/isVideoUrl";
 
 export default function ProfileMedia({ userId }: { userId: number }) {
   const [mediaPosts, setMediaPosts] = useState<Post[]>([]);
@@ -24,7 +25,7 @@ export default function ProfileMedia({ userId }: { userId: number }) {
       <div className="grid grid-cols-3 gap-1.5">
         {mediaPosts.slice(0, 9).map((post) => (
           <Link key={post.id} to={`/post/${post.id}`} className="aspect-square overflow-hidden rounded-lg cursor-pointer group">
-            {post.imageUrl!.includes("/video/upload/") ? (
+            {isVideoUrl(post.imageUrl) ? (
               <video src={post.imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" muted />
             ) : (
               <img src={post.imageUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />

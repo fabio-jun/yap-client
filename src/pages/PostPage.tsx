@@ -8,6 +8,7 @@ import { Heart, Trash2, Send, Reply } from "lucide-react";
 import ConfirmModal from "../components/ConfirmModal";
 import type { Post, Comment } from "../types";
 import { renderContent } from "../utils/renderContent";
+import { isVideoUrl } from "../utils/isVideoUrl";
 
 interface CommentItemProps {
   comment: Comment;
@@ -222,7 +223,7 @@ export default function PostPage() {
           <p className="text-lg mt-3 whitespace-pre-wrap leading-relaxed">{renderContent(post.content, post.mentionedUsers)}</p>
 
           {post.imageUrl && (
-            post.imageUrl.includes("/video/upload/") ? (
+            isVideoUrl(post.imageUrl) ? (
               <video src={post.imageUrl} className="rounded-xl mt-3 max-h-96 w-full" controls />
             ) : (
               <img src={post.imageUrl} alt="" className="rounded-xl mt-3 max-h-96 w-full object-contain" />
