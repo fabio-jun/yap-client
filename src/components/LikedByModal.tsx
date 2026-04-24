@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Heart, X } from "lucide-react";
 import { getLikedUsers, type LikedUserResponse } from "../api/likeApi";
+import AvatarFallback from "./AvatarFallback";
 
 interface LikedByModalProps {
   open: boolean;
@@ -80,9 +81,7 @@ export default function LikedByModal({ open, postId, onClose }: LikedByModalProp
                     {user.profileImageUrl ? (
                       <img src={user.profileImageUrl} alt={user.userName} />
                     ) : (
-                      <div className="bg-primary text-primary-content flex items-center justify-center text-sm font-bold w-full h-full">
-                        {user.userName.charAt(0).toUpperCase()}
-                      </div>
+                      <AvatarFallback label={user.userName} className="text-sm" />
                     )}
                   </div>
                 </div>

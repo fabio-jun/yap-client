@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Bell } from "lucide-react";
 import { getUnreadCount } from "../api/notificationApi";
-import NotificationDropdown from "./NotificationDropdown";
 
 interface NotificationBellProps {
   variant?: "sidebar" | "bottom";
@@ -10,7 +9,6 @@ interface NotificationBellProps {
 
 export default function NotificationBell({ variant = "sidebar" }: NotificationBellProps) {
   const [unreadCount, setUnreadCount] = useState(0);
-  const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
 
   const fetchCount = useCallback(async () => {
@@ -50,38 +48,28 @@ export default function NotificationBell({ variant = "sidebar" }: NotificationBe
             </span>
           )}
         </div>
-        <span className="max-w-full truncate">Alerts</span>
+        <span className="max-w-full truncate">Notifications</span>
       </Link>
     );
   }
 
   return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setIsOpen((prev) => !prev)}
-        className={`btn btn-ghost gap-3 w-12 md:w-full justify-center md:justify-start transition-all duration-200 cursor-pointer ${
-          isOpen ? "bg-primary/10 text-primary font-semibold" : "hover:bg-base-200"
-        }`}
-        aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
-        aria-expanded={isOpen}
-      >
-        <div className="indicator">
-          <Bell className="w-6 h-6" aria-hidden="true" />
-          {unreadCount > 0 && (
-            <span className="indicator-item badge badge-primary badge-sm text-xs" aria-live="polite">
-              {unreadCount > 99 ? "99+" : unreadCount}
-            </span>
-          )}
-        </div>
-        <span className="hidden md:inline text-lg">Notifications</span>
-      </button>
-
-      <NotificationDropdown
-        isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
-        onCountChange={fetchCount}
-      />
-    </div>
+    <Link
+      to="/notifications"
+      className={`flex w-full items-center gap-[14px] rounded-[14px] px-[14px] py-[11px] text-[1rem] transition-colors duration-150 ${
+        location.pathname.startsWith("/notifications")
+          ? "bg-primary/12 font-semibold text-primary"
+          : "text-base-content/58 hover:bg-base-200/70 hover:text-base-content"
+      }`}
+      aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
+    >
+      <Bell className="h-5 w-5" aria-hidden="true" />
+      <span>Notifications</span>
+      {unreadCount > 0 && (
+        <span className="ml-auto inline-flex min-w-[20px] items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[11px] font-bold text-primary-content" aria-live="polite">
+          {unreadCount > 99 ? "99+" : unreadCount}
+        </span>
+      )}
+    </Link>
   );
 }

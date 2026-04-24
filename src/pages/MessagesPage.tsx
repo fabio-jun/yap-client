@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getConversations } from "../api/messageApi";
+import AvatarFallback from "../components/AvatarFallback";
 import EmptyState from "../components/EmptyState";
 import { Mail } from "lucide-react";
 import type { ConversationPreview } from "../types";
@@ -18,10 +19,10 @@ function timeAgo(dateStr: string) {
 
 function MessagesSkeleton() {
   return (
-    <div className="flex flex-col gap-1 animate-pulse">
+    <div className="animate-pulse">
       {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-base-200">
-          <div className="w-12 h-12 rounded-full bg-base-300 shrink-0" />
+        <div key={i} className="flex items-center gap-3 border-b border-base-300 px-4 py-4">
+          <div className="h-12 w-12 rounded-full bg-base-300 shrink-0" />
           <div className="flex-1 space-y-2">
             <div className="flex justify-between">
               <div className="h-4 w-24 bg-base-300 rounded" />
@@ -47,10 +48,14 @@ export default function MessagesPage() {
 
   return (
     <div className="animate-fade-in">
-      <h2 className="text-2xl font-bold mb-4">Messages</h2>
+      <div className="border-b border-base-300 px-4 pb-4 pt-3">
+        <h2 className="text-[1.5rem] font-bold tracking-tight">Messages</h2>
+      </div>
 
       {loading ? (
-        <MessagesSkeleton />
+        <div className="mt-3">
+          <MessagesSkeleton />
+        </div>
       ) : conversations.length === 0 ? (
         <EmptyState
           icon={<Mail className="w-12 h-12" />}
@@ -58,30 +63,29 @@ export default function MessagesPage() {
           description="Send a message from someone's profile to start a conversation."
         />
       ) : (
-        <div className="flex flex-col gap-1">
-          {conversations.map((conv) => (
+        <div className="mt-1">
+          {conversations.map((conv, index) => (
             <Link
               key={conv.userId}
               to={`/messages/${conv.userId}`}
-              className="flex items-center gap-3 p-3 rounded-xl bg-base-200 hover:bg-base-300/50 transition-colors duration-200 cursor-pointer"
+              className="flex cursor-pointer items-center gap-3 border-b border-base-300 px-4 py-4 transition-colors duration-200 hover:bg-base-200/25"
             >
-              <div className="avatar">
-                <div className="w-12 h-12 rounded-full ring-2 ring-base-300">
+              <div className="avatar relative">
+                <div className="w-12 h-12 rounded-full">
                   {conv.profileImageUrl ? (
                     <img src={conv.profileImageUrl} alt={conv.userName} />
                   ) : (
-                    <div className="bg-primary text-primary-content flex items-center justify-center text-lg font-bold w-full h-full">
-                      {conv.userName.charAt(0).toUpperCase()}
-                    </div>
+                    <AvatarFallback label={conv.userName} className="text-lg" />
                   )}
                 </div>
+                {index < 2 && <div className="absolute right-0 top-0 h-2.5 w-2.5 rounded-full bg-primary" />}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-center">
-                  <span className="font-bold">@{conv.userName}</span>
-                  <span className="text-xs text-base-content/40">{timeAgo(conv.lastMessageDate)}</span>
+                  <span className="text-[14px] font-bold text-base-content">{conv.userName}</span>
+                  <span className="text-[13px] text-base-content/40">{timeAgo(conv.lastMessageDate)}</span>
                 </div>
-                <p className="text-sm text-base-content/50 truncate">{conv.lastMessageContent}</p>
+                <p className="truncate text-[15px] text-base-content/64">{conv.lastMessageContent}</p>
               </div>
             </Link>
           ))}

@@ -6,7 +6,6 @@ import YapCard from "../components/YapCard";
 import CreateYap from "../components/CreateYap";
 import YapSkeleton from "../components/YapSkeleton";
 import EmptyState from "../components/EmptyState";
-import { Footer2 } from "../components/ui/Footer2";
 import { MessageCircle, Users, ArrowUp, Mail, Repeat2 } from "lucide-react";
 import type { Post, PagedResponse } from "../types";
 
@@ -16,87 +15,79 @@ const LANDING_FEATURES = [
   {
     icon: MessageCircle,
     title: "Yap away",
-    description: "Post up to 280 characters, short enough to say something real.",
+    description: "280 characters. Say something real.",
   },
   {
     icon: Users,
     title: "Follow people",
-    description: "Build a feed that reflects your personality.",
+    description: "A feed that reflects who you are.",
   },
   {
     icon: Mail,
     title: "Direct messages",
-    description: "Private conversations, without limits.",
+    description: "Private conversations, no limits.",
   },
   {
     icon: Repeat2,
     title: "Re-yap & quote",
-    description: "React with your own takes.",
+    description: "React with your own take.",
   },
 ];
 
 function LandingPage() {
-  useEffect(() => {
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, []);
-
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] animate-fade-in-up items-center justify-center">
-      <div className="flex flex-col justify-center flex-1 px-8 md:px-14 lg:px-20 py-16">
-        <div className="mb-8">
-          <span className="block text-7xl sm:text-8xl lg:text-9xl font-extrabold text-base-content tracking-tighter leading-none select-none">
+    <div className="flex h-[calc(100vh-68px)] flex-col animate-fade-in overflow-hidden">
+      <div className="mx-auto flex flex-1 w-full max-w-[1100px] items-stretch px-8">
+        {/* Left column */}
+        <div className="flex flex-1 flex-col justify-center pr-16 py-10">
+          <h1 className="font-brand mb-2 text-[5.5rem] font-extrabold leading-none tracking-[-3px] text-base-content select-none">
             Yap<span className="text-primary">.</span>
-          </span>
+          </h1>
+          <p className="mb-10 max-w-[20ch] text-[1.375rem] font-medium leading-[1.4] text-base-content/56">
+            Say things. Find people.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              to="/register"
+              className="btn btn-primary h-[52px] rounded-[10px] border-none px-8 text-[15px] font-bold shadow-none"
+            >
+              Get started &mdash; it's free
+            </Link>
+            <Link
+              to="/login"
+              className="btn btn-ghost h-[52px] rounded-[10px] border border-base-300 px-7 text-[15px] font-semibold shadow-none"
+            >
+              Sign in
+            </Link>
+          </div>
         </div>
 
-        <p className="text-xl md:text-2xl text-base-content/55 font-medium leading-relaxed max-w-[22ch] mb-10">
-          Say things.
-          <br />
-          Find people.
-          <br />
-        </p>
-
-        <div className="flex flex-col sm:flex-row gap-3 max-w-[20rem]">
-          <Link
-            to="/register"
-            className="btn btn-primary btn-lg flex-1 font-semibold tracking-tight"
-          >
-            Get started
-          </Link>
-          <Link
-            to="/login"
-            className="btn btn-ghost btn-lg flex-1 border border-base-300 font-medium"
-          >
-            Sign in
-          </Link>
-        </div>
-      </div>
-
-      <div className="hidden md:flex flex-col justify-center w-72 lg:w-[22rem] shrink-0 border-l border-base-300/40 px-8 py-16 animate-stagger">
-        {LANDING_FEATURES.map(({ icon: Icon, title, description }) => (
-          <div
-            key={title}
-            className="flex gap-4 py-5 border-b border-base-200 last:border-b-0"
-          >
-            <Icon className="w-4 h-4 shrink-0 mt-1 text-primary" />
-            <div>
-              <div className="font-semibold text-sm text-base-content leading-tight">
-                {title}
+        {/* Right column */}
+        <div className="hidden w-[320px] shrink-0 border-l border-base-300 pl-12 py-10 md:flex flex-col justify-center">
+          {LANDING_FEATURES.map(({ icon: Icon, title, description }, i) => (
+            <div
+              key={title}
+              className={`flex items-start gap-4 py-5 ${i < LANDING_FEATURES.length - 1 ? "border-b border-base-300" : ""}`}
+            >
+              <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center text-primary">
+                <Icon className="h-[18px] w-[18px]" />
               </div>
-              <div className="text-xs text-base-content/50 mt-1 leading-relaxed">
-                {description}
+              <div>
+                <div className="font-brand text-[14px] font-bold text-base-content">{title}</div>
+                <div className="mt-0.5 text-[13px] leading-[1.5] text-base-content/50">{description}</div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 z-10">
-        <Footer2 />
-      </div>
+      <footer className="shrink-0 border-t border-base-300 py-4">
+        <div className="mx-auto flex max-w-[1100px] items-center justify-center gap-6 px-8 text-[13px] text-base-content/40">
+          <span>© 2026 Yap. All rights reserved.</span>
+          <Link to="/terms" className="hover:text-base-content/70 transition-colors">Terms</Link>
+          <Link to="/privacy" className="hover:text-base-content/70 transition-colors">Privacy</Link>
+        </div>
+      </footer>
     </div>
   );
 }
@@ -104,15 +95,13 @@ function LandingPage() {
 function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
-      className="flex-1 py-3 text-center font-semibold relative hover:bg-base-200/50 transition-colors cursor-pointer"
+      className="relative flex-1 cursor-pointer py-4 text-center text-[16px] font-semibold transition-colors hover:bg-base-200/30"
       onClick={onClick}
     >
       <span className={`transition-colors duration-200 ${active ? "text-base-content" : "text-base-content/50"}`}>
         {children}
       </span>
-      {active && (
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-1 rounded-full bg-primary animate-scale-in" />
-      )}
+      {active && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary" />}
     </button>
   );
 }
@@ -138,7 +127,7 @@ export default function HomePage() {
       } else {
         const res = await getAllPosts({ page: pageNum, pageSize: PAGE_SIZE });
         const data = res.data as PagedResponse<Post>;
-        setPosts((prev) => reset ? data.items : [...prev, ...data.items]);
+        setPosts((prev) => (reset ? data.items : [...prev, ...data.items]));
         setHasMore(pageNum < data.totalPages);
       }
     } finally {
@@ -170,7 +159,9 @@ export default function HomePage() {
 
     const el = observerRef.current;
     if (el) observer.observe(el);
-    return () => { if (el) observer.unobserve(el); };
+    return () => {
+      if (el) observer.unobserve(el);
+    };
   }, [hasMore, loading, tab, user, loadPosts]);
 
   useEffect(() => {
@@ -215,9 +206,11 @@ export default function HomePage() {
 
   return (
     <div>
-      <div className="flex border-b border-base-300 mb-0">
-        <TabButton active={tab === "feed"} onClick={() => setTab("feed")}>Feed</TabButton>
-        <TabButton active={tab === "all"} onClick={() => setTab("all")}>All Yaps</TabButton>
+      <div className="border-b border-base-300">
+        <div className="flex">
+          <TabButton active={tab === "feed"} onClick={() => setTab("feed")}>Feed</TabButton>
+          <TabButton active={tab === "all"} onClick={() => setTab("all")}>All Yaps</TabButton>
+        </div>
       </div>
 
       <CreateYap onCreated={handleCreated} />
@@ -255,7 +248,7 @@ export default function HomePage() {
 
       {showScrollTop && (
         <button
-          className="fixed bottom-6 right-6 btn btn-circle btn-primary shadow-lg shadow-primary/25 z-50 animate-fade-in"
+          className="fixed bottom-6 right-6 z-50 btn btn-circle btn-primary shadow-lg shadow-primary/25 animate-fade-in"
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
           aria-label="Scroll to top"
         >

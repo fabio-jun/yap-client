@@ -1,15 +1,15 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { Bookmark, Heart, MessageCircle, PencilLine, Repeat2, Share2, Trash2 } from "lucide-react";
+import toast from "react-hot-toast";
 import { toggleLike } from "../api/likeApi";
-import { useAuth } from "../hooks/useAuth";
-import { Heart, MessageCircle, Bookmark, Trash2, Repeat2, PencilLine, Flag, Share2 } from "lucide-react";
 import { toggleBookmark } from "../api/bookmarkApi";
 import { deletePost } from "../api/postApi";
 import { quoteRepost, toggleRepost } from "../api/repostApi";
-import toast from "react-hot-toast";
+import { useAuth } from "../hooks/useAuth";
 import ConfirmModal from "./ConfirmModal";
 import LikedByModal from "./LikedByModal";
-import ReportModal from "./ReportModal";
+import AvatarFallback from "./AvatarFallback";
 import type { Post } from "../types";
 import { renderContent } from "../utils/renderContent";
 import { isVideoUrl } from "../utils/isVideoUrl";
@@ -54,16 +54,76 @@ async function copyText(text: string) {
   document.body.removeChild(textarea);
 }
 
-export default function YapCard({ post, onLikeToggle, onBookmarkToggle, onDelete, onRepostToggle }: YapCardProps) {
+function Avatar({
+  imageUrl,
+  label,
+  sizeClass = "h-10 w-10",
+}: {
+  imageUrl?: string;
+  label: string;
+  sizeClass?: string;
+}) {
+  return (
+    <div className={`overflow-hidden rounded-full ${sizeClass}`}>
+      {imageUrl ? (
+        <img src={imageUrl} alt={label} className="h-full w-full object-cover" />
+      ) : (
+        <AvatarFallback label={label} className="text-sm" />
+      )}
+    </div>
+  );
+}
+
+function ActionButton({
+  active,
+  activeClassName,
+  className,
+  disabled,
+  label,
+  onClick,
+  count,
+  children,
+}: {
+  active?: boolean;
+  activeClassName: string;
+  className?: string;
+  disabled?: boolean;
+  label: string;
+  onClick?: () => void;
+  count?: number;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      className={`flex items-center gap-1 rounded-full px-1.5 py-1 text-[13px] font-medium transition-colors duration-150 ${
+        active ? activeClassName : "text-base-content/44 hover:bg-base-200 hover:text-base-content/80"
+      } ${className ?? ""}`}
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+    >
+      {children}
+      {count && count > 0 ? <span>{count}</span> : null}
+    </button>
+  );
+}
+
+export default function YapCard({
+  post,
+  onLikeToggle,
+  onBookmarkToggle,
+  onDelete,
+  onRepostToggle,
+}: YapCardProps) {
   const { user } = useAuth();
   const isAuthor = user && String(post.authorId) === user.id;
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [likedByOpen, setLikedByOpen] = useState(false);
   const [repostMenuOpen, setRepostMenuOpen] = useState(false);
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [quoteContent, setQuoteContent] = useState(post.quoteContent || "");
   const [quoteSaving, setQuoteSaving] = useState(false);
-  const [reportOpen, setReportOpen] = useState(false);
-  const [likedByOpen, setLikedByOpen] = useState(false);
 
   const handleDelete = async () => {
     try {
@@ -72,8 +132,9 @@ export default function YapCard({ post, onLikeToggle, onBookmarkToggle, onDelete
       toast.success("Yap deleted!");
     } catch {
       toast.error("Failed to delete yap.");
+    } finally {
+      setConfirmDelete(false);
     }
-    setConfirmDelete(false);
   };
 
   const handleLike = async () => {
@@ -86,7 +147,6 @@ export default function YapCard({ post, onLikeToggle, onBookmarkToggle, onDelete
     if (!user) return;
     const res = await toggleBookmark(post.id);
     onBookmarkToggle?.(post.id, res.data.bookmarked);
-    toast(res.data.bookmarked ? "Bookmarked!" : "Removed from bookmarks");
   };
 
   const handleSimpleRepost = async () => {
@@ -120,10 +180,9 @@ export default function YapCard({ post, onLikeToggle, onBookmarkToggle, onDelete
 
   const handleShare = async () => {
     const postId = post.originalPostId || post.id;
-    const url = `${window.location.origin}/post/${postId}`;
 
     try {
-      await copyText(url);
+      await copyText(`${window.location.origin}/post/${postId}`);
       toast.success("Link copied.");
     } catch {
       toast.error("Could not copy link.");
@@ -132,249 +191,205 @@ export default function YapCard({ post, onLikeToggle, onBookmarkToggle, onDelete
 
   return (
     <>
-      <div className="border-b border-base-300 px-4 py-4 hover:bg-base-200/40 transition-colors duration-150">
-        <div>
+      <div className="border-b border-base-300 px-4 py-4 transition-colors duration-150 hover:bg-base-200/20">
+        {post.isRepost && !post.quoteContent && post.repostedByUserName ? (
+          <div className="mb-1.5 ml-[52px] flex items-center gap-2 text-[12px] font-semibold text-base-content/44">
+            <Repeat2 className="h-3.5 w-3.5" />
+            <Link to={`/profile/${post.repostedByUserId}`} className="transition-colors hover:text-primary">
+              {post.repostedByUserName} re-yapped
+            </Link>
+          </div>
+        ) : null}
 
-          {/* Simple repost banner — not shown for quote reposts */}
-          {post.isRepost && !post.quoteContent && post.repostedByUserName && (
-            <div className="flex items-center gap-2 text-xs font-semibold text-base-content/50 mb-2 ml-1">
-              <Repeat2 className="w-3.5 h-3.5" />
-              <Link to={`/profile/${post.repostedByUserId}`} className="hover:text-primary transition-colors">
-                {post.repostedByUserName} re-yapped
-              </Link>
-            </div>
-          )}
+        <div className="flex items-start gap-3">
+          <Link to={`/profile/${post.quoteContent ? post.repostedByUserId : post.authorId}`} className="shrink-0">
+            <Avatar
+              imageUrl={post.quoteContent ? post.repostedByProfileImageUrl : post.authorProfileImageUrl}
+              label={post.quoteContent ? (post.repostedByUserName ?? "?") : post.authorName}
+            />
+          </Link>
 
-          {post.quoteContent ? (
-            /* ── Quote repost: reposter header + quote text + embedded original ── */
-            <>
-              <div className="flex items-start gap-3">
-                <Link to={`/profile/${post.repostedByUserId}`} className="shrink-0">
-                  <div className="avatar">
-                    <div className="w-10 h-10 rounded-full ring-2 ring-base-300 transition-all hover:ring-primary">
-                      {post.repostedByProfileImageUrl ? (
-                        <img src={post.repostedByProfileImageUrl} alt={post.repostedByUserName} />
-                      ) : (
-                        <div className="bg-primary text-primary-content flex items-center justify-center text-sm font-bold w-full h-full">
-                          {(post.repostedByUserName ?? "?").charAt(0).toUpperCase()}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </Link>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Link to={`/profile/${post.repostedByUserId}`} className="font-bold hover:text-primary transition-colors truncate">
-                      {post.repostedByUserName
-                        ? post.repostedByUserName.charAt(0).toUpperCase() + post.repostedByUserName.slice(1)
-                        : ""}
-                    </Link>
-                    <Link to={`/profile/${post.repostedByUserId}`} className="text-base-content/50 text-sm truncate">
-                      @{post.repostedByUserName}
-                    </Link>
-                    <span className="text-base-content/30 text-sm">·</span>
-                    <span
-                      className="text-sm text-base-content/50 shrink-0 tooltip tooltip-bottom cursor-default"
-                      data-tip={fullDate(post.repostedAt ?? post.createdAt)}
-                    >
-                      {timeAgo(post.repostedAt ?? post.createdAt)}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-base-content leading-relaxed">
-                    {renderContent(post.quoteContent, post.mentionedUsers)}
-                  </p>
-                </div>
-              </div>
-
-              {/* Embedded original post */}
-              <Link
-                to={`/post/${post.id}`}
-                className="block mt-3 rounded-xl border border-base-300 p-3 hover:bg-base-300/40 transition-colors"
-              >
-                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <div className="w-5 h-5 rounded-full overflow-hidden shrink-0">
-                    {post.authorProfileImageUrl ? (
-                      <img src={post.authorProfileImageUrl} alt={post.authorName} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="bg-primary text-primary-content flex items-center justify-center text-xs font-bold w-full h-full">
-                        {post.authorName.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-                  <span className="font-bold text-sm">
-                    {post.authorName.charAt(0).toUpperCase() + post.authorName.slice(1)}
+          <div className="min-w-0 flex-1">
+            {post.quoteContent ? (
+              <>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Link to={`/profile/${post.repostedByUserId}`} className="truncate text-[14px] font-bold tracking-tight transition-colors hover:text-primary">
+                    {post.repostedByUserName}
+                  </Link>
+                  <span className="truncate text-[13px] text-base-content/50">@{post.repostedByUserName}</span>
+                  <span className="text-base-content/30">·</span>
+                  <span className="tooltip tooltip-bottom cursor-default text-[13px] text-base-content/42" data-tip={fullDate(post.repostedAt ?? post.createdAt)}>
+                    {timeAgo(post.repostedAt ?? post.createdAt)}
                   </span>
-                  <span className="text-base-content/50 text-xs">@{post.authorName}</span>
-                  <span className="text-base-content/30 text-xs">·</span>
-                  <span className="text-xs text-base-content/50">{timeAgo(post.createdAt)}</span>
+                  {isAuthor ? (
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-xs btn-circle ml-auto text-base-content/30 transition-colors hover:text-error"
+                      onClick={() => setConfirmDelete(true)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  ) : null}
                 </div>
-                <p className="text-sm text-base-content/80 leading-relaxed line-clamp-3">
-                  {renderContent(post.content, post.mentionedUsers)}
+
+                <p className="mt-1 text-[15px] leading-relaxed text-base-content">
+                  {renderContent(post.quoteContent, post.mentionedUsers)}
                 </p>
-                {post.imageUrl && (
-                  <div className="mt-2">
-                    {isVideoUrl(post.imageUrl) ? (
-                      <video src={post.imageUrl} className="rounded-lg max-h-48 w-full" controls onClick={(e) => e.preventDefault()} />
+
+                <Link
+                  to={`/post/${post.id}`}
+                  className="mt-3 block rounded-[14px] border border-base-300 p-3 transition-colors hover:bg-base-300/20"
+                >
+                  <div className="mb-1 flex items-center gap-2 flex-wrap">
+                    <Avatar imageUrl={post.authorProfileImageUrl} label={post.authorName} sizeClass="h-5 w-5" />
+                    <span className="text-sm font-bold text-base-content">{post.authorName}</span>
+                    <span className="text-xs text-base-content/50">@{post.authorName}</span>
+                    <span className="text-xs text-base-content/30">·</span>
+                    <span className="text-xs text-base-content/42">{timeAgo(post.createdAt)}</span>
+                  </div>
+                  <p className="text-sm leading-relaxed text-base-content/80 line-clamp-3">
+                    {renderContent(post.content, post.mentionedUsers)}
+                  </p>
+                  {post.imageUrl ? (
+                    <div className="mt-2">
+                      {isVideoUrl(post.imageUrl) ? (
+                      <video src={post.imageUrl} className="max-h-48 w-full rounded-[12px]" controls onClick={(e) => e.preventDefault()} />
                     ) : (
-                      <img src={post.imageUrl} alt="" className="rounded-lg max-h-48 w-full object-contain" />
+                      <img src={post.imageUrl} alt="" className="max-h-48 w-full rounded-[12px] object-contain" />
                     )}
                   </div>
-                )}
-              </Link>
-            </>
-          ) : (
-            /* ── Normal / simple repost: original author header + content ── */
-            <div className="flex items-start gap-3">
-              <Link to={`/profile/${post.authorId}`} className="shrink-0">
-                <div className="avatar">
-                  <div className="w-10 h-10 rounded-full ring-2 ring-base-300 transition-all hover:ring-primary">
-                    {post.authorProfileImageUrl ? (
-                      <img src={post.authorProfileImageUrl} alt={post.authorName} />
-                    ) : (
-                      <div className="bg-primary text-primary-content flex items-center justify-center text-sm font-bold w-full h-full">
-                        {post.authorName.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </Link>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <Link to={`/profile/${post.authorId}`} className="font-bold hover:text-primary transition-colors truncate">
-                    {post.authorName.charAt(0).toUpperCase() + post.authorName.slice(1)}
+                ) : null}
+                </Link>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Link to={`/profile/${post.authorId}`} className="truncate text-[14px] font-bold tracking-tight transition-colors hover:text-primary">
+                    {post.authorName}
                   </Link>
-                  <Link to={`/profile/${post.authorId}`} className="text-base-content/50 text-sm truncate">
-                    @{post.authorName}
-                  </Link>
-                  <span className="text-base-content/30 text-sm">·</span>
-                  <span className="text-sm text-base-content/50 shrink-0 tooltip tooltip-bottom cursor-default" data-tip={fullDate(post.createdAt)}>
+                  <span className="truncate text-[13px] text-base-content/50">@{post.authorName}</span>
+                  <span className="text-base-content/30">·</span>
+                  <span className="tooltip tooltip-bottom cursor-default text-[13px] text-base-content/42" data-tip={fullDate(post.createdAt)}>
                     {timeAgo(post.createdAt)}
                   </span>
-                  {isAuthor && (
+                  {isAuthor ? (
                     <button
-                      className="btn btn-ghost btn-xs btn-circle ml-auto text-base-content/30 hover:text-error transition-colors"
+                      type="button"
+                      className="btn btn-ghost btn-xs btn-circle ml-auto text-base-content/30 transition-colors hover:text-error"
                       onClick={() => setConfirmDelete(true)}
-                      aria-label="Delete yap"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="h-3.5 w-3.5" />
                     </button>
-                  )}
+                  ) : null}
                 </div>
-                <Link to={`/post/${post.id}`} className="mt-1 block hover:no-underline cursor-pointer">
-                  <p className="text-base-content leading-relaxed">{renderContent(post.content, post.mentionedUsers)}</p>
+
+                <Link to={`/post/${post.id}`} className="mt-1 block">
+                  <p className="text-[15px] leading-relaxed text-base-content">
+                    {renderContent(post.content, post.mentionedUsers)}
+                  </p>
                 </Link>
-                {post.imageUrl && (
-                  <Link to={`/post/${post.id}`} className="block mt-2">
+
+                {post.imageUrl ? (
+                  <Link to={`/post/${post.id}`} className="mt-3 block">
                     {isVideoUrl(post.imageUrl) ? (
-                      <video src={post.imageUrl} className="rounded-xl max-h-96 w-full" controls onClick={(e) => e.preventDefault()} />
+                      <video src={post.imageUrl} className="max-h-96 w-full rounded-[14px]" controls onClick={(e) => e.preventDefault()} />
                     ) : (
-                      <img src={post.imageUrl} alt="" className="rounded-xl max-h-96 w-full object-contain hover:brightness-90 transition-all duration-200" />
+                      <img src={post.imageUrl} alt="" className="max-h-96 w-full rounded-[14px] object-contain transition-all duration-150 hover:brightness-95" />
                     )}
                   </Link>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ── Action buttons (shared for all post types) ── */}
-          <div className="flex items-center gap-0 mt-3 -ml-1.5 text-base-content/40">
-            <div
-              className={`flex items-center rounded-full text-xs font-medium transition-colors duration-150 ${
-                post.hasLiked ? "text-error" : "hover:text-error hover:bg-error/8"
-              }`}
-            >
-              <button
-                className="flex items-center px-2 py-1.5 rounded-full transition-colors duration-150"
-                onClick={handleLike}
-                disabled={!user}
-                aria-label={post.hasLiked ? "Unlike" : "Like"}
-              >
-                <Heart className="w-4 h-4" fill={post.hasLiked ? "currentColor" : "none"} />
-              </button>
-              {post.likeCount > 0 && (
-                <button
-                  type="button"
-                  className="pr-2 py-1.5 -ml-1 rounded-full transition-colors duration-150"
-                  onClick={() => setLikedByOpen(true)}
-                  aria-label="Show users who liked this yap"
-                >
-                  {post.likeCount}
-                </button>
-              )}
-            </div>
-
-            <Link
-              to={`/post/${post.id}`}
-              className="flex items-center gap-1.5 px-2 py-1.5 rounded-full text-xs font-medium transition-colors duration-150 hover:text-primary hover:bg-primary/8"
-            >
-              <MessageCircle className="w-4 h-4" />
-            </Link>
-
-            <div className="relative">
-              <button
-                className={`flex items-center gap-1.5 px-2 py-1.5 rounded-full text-xs font-medium transition-colors duration-150 ${
-                  post.hasReposted ? "text-success" : "hover:text-success hover:bg-success/8"
-                }`}
-                onClick={() => setRepostMenuOpen((open) => !open)}
-                disabled={!user}
-                aria-label={post.hasReposted ? "Re-yap options" : "Re-yap"}
-                aria-expanded={repostMenuOpen}
-              >
-                <Repeat2 className="w-4 h-4" />
-                {post.repostCount > 0 && <span>{post.repostCount}</span>}
-              </button>
-              {repostMenuOpen && (
-                <div className="absolute left-0 top-full mt-1 z-30 w-44 rounded-xl border border-base-300 bg-base-100 shadow-xl overflow-hidden animate-scale-in">
-                  <button
-                    type="button"
-                    onClick={handleSimpleRepost}
-                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-left hover:bg-base-200 transition-colors cursor-pointer font-medium"
-                  >
-                    <Repeat2 className="w-4 h-4" />
-                    {post.hasReposted ? "Undo re-yap" : "Re-yap"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setQuoteOpen(true); setRepostMenuOpen(false); }}
-                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-left hover:bg-base-200 transition-colors cursor-pointer font-medium"
-                  >
-                    <PencilLine className="w-4 h-4" />
-                    Quote re-yap
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <button
-              className={`flex items-center gap-1.5 px-2 py-1.5 rounded-full text-xs font-medium transition-colors duration-150 ${
-                post.hasBookmarked ? "text-primary" : "hover:text-primary hover:bg-primary/8"
-              }`}
-              onClick={handleBookmark}
-              disabled={!user}
-              aria-label={post.hasBookmarked ? "Remove bookmark" : "Bookmark"}
-            >
-              <Bookmark className="w-4 h-4" fill={post.hasBookmarked ? "currentColor" : "none"} />
-            </button>
-            <button
-              type="button"
-              className="flex items-center gap-1.5 px-2 py-1.5 rounded-full text-xs font-medium transition-colors duration-150 hover:text-secondary hover:bg-secondary/8"
-              onClick={handleShare}
-              aria-label="Copy yap link"
-            >
-              <Share2 className="w-4 h-4" />
-            </button>
-            {user && !isAuthor && (
-              <button
-                type="button"
-                className="flex items-center gap-1.5 px-2 py-1.5 rounded-full text-xs font-medium transition-colors duration-150 hover:text-error hover:bg-error/8 ml-auto"
-                onClick={() => setReportOpen(true)}
-                aria-label="Report yap"
-              >
-                <Flag className="w-3.5 h-3.5" />
-              </button>
+                ) : null}
+              </>
             )}
-          </div>
 
+            <div className="mt-2.5 flex items-center gap-0.5 -ml-1">
+              <div className="flex items-center">
+                <ActionButton
+                  active={post.hasLiked}
+                  activeClassName="text-error hover:bg-error/10 hover:text-error"
+                  disabled={!user}
+                  label={post.hasLiked ? "Unlike" : "Like"}
+                  onClick={handleLike}
+                >
+                  <Heart className="h-4 w-4" fill={post.hasLiked ? "currentColor" : "none"} />
+                </ActionButton>
+                {post.likeCount > 0 ? (
+                  <button
+                    type="button"
+                    className={`-ml-0.5 rounded-full py-1 pr-2 text-[13px] font-medium transition-colors ${
+                      post.hasLiked ? "text-error" : "text-base-content/44 hover:text-base-content/80"
+                    }`}
+                    onClick={() => setLikedByOpen(true)}
+                  >
+                    {post.likeCount}
+                  </button>
+                ) : null}
+              </div>
+
+              <Link
+                to={`/post/${post.id}`}
+                className="flex items-center gap-1 rounded-full px-1.5 py-1 text-[13px] font-medium text-base-content/44 transition-colors hover:bg-base-200 hover:text-base-content/80"
+              >
+                <MessageCircle className="h-4 w-4" />
+                {post.commentCount > 0 ? <span>{post.commentCount}</span> : null}
+              </Link>
+
+              <div className="relative">
+                <ActionButton
+                  active={post.hasReposted}
+                  activeClassName="text-success hover:bg-success/10 hover:text-success"
+                  disabled={!user}
+                  label={post.hasReposted ? "Re-yap options" : "Re-yap"}
+                  onClick={() => setRepostMenuOpen((open) => !open)}
+                  count={post.repostCount}
+                >
+                  <Repeat2 className="h-4 w-4" />
+                </ActionButton>
+
+                {repostMenuOpen ? (
+                  <div className="absolute left-0 top-full z-30 mt-1 w-44 overflow-hidden rounded-2xl border border-base-300 bg-base-100 shadow-xl">
+                    <button
+                      type="button"
+                      onClick={handleSimpleRepost}
+                      className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm font-medium transition-colors hover:bg-base-200"
+                    >
+                      <Repeat2 className="h-4 w-4" />
+                      {post.hasReposted ? "Undo re-yap" : "Re-yap"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQuoteOpen(true);
+                        setRepostMenuOpen(false);
+                      }}
+                      className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm font-medium transition-colors hover:bg-base-200"
+                    >
+                      <PencilLine className="h-4 w-4" />
+                      Quote re-yap
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+
+              <ActionButton
+                active={post.hasBookmarked}
+                activeClassName="text-primary hover:bg-primary/10 hover:text-primary"
+                disabled={!user}
+                label={post.hasBookmarked ? "Remove bookmark" : "Bookmark"}
+                onClick={handleBookmark}
+              >
+                <Bookmark className="h-4 w-4" fill={post.hasBookmarked ? "currentColor" : "none"} />
+              </ActionButton>
+
+              <ActionButton
+                activeClassName="text-primary hover:bg-primary/10 hover:text-primary"
+                className="ml-auto"
+                label="Copy yap link"
+                onClick={handleShare}
+              >
+                <Share2 className="h-4 w-4" />
+              </ActionButton>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -386,23 +401,16 @@ export default function YapCard({ post, onLikeToggle, onBookmarkToggle, onDelete
         onCancel={() => setConfirmDelete(false)}
       />
 
-      <ReportModal
-        open={reportOpen}
-        onClose={() => setReportOpen(false)}
-        reportedUserId={post.authorId}
-        postId={post.originalPostId || post.id}
-      />
-
       <LikedByModal
         open={likedByOpen}
         postId={post.originalPostId || post.id}
         onClose={() => setLikedByOpen(false)}
       />
 
-      {quoteOpen && (
+      {quoteOpen ? (
         <dialog className="modal modal-open" onClick={() => setQuoteOpen(false)}>
           <div className="modal-box max-w-sm animate-scale-in" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-bold text-lg mb-3">Quote re-yap</h3>
+            <h3 className="mb-3 text-lg font-bold">Quote re-yap</h3>
             <textarea
               className="textarea textarea-bordered w-full"
               rows={4}
@@ -411,7 +419,7 @@ export default function YapCard({ post, onLikeToggle, onBookmarkToggle, onDelete
               onChange={(e) => setQuoteContent(e.target.value)}
               placeholder="Add your thoughts"
             />
-            <div className="flex justify-between items-center mt-2">
+            <div className="mt-2 flex items-center justify-between">
               <span className="text-xs text-base-content/40">{quoteContent.length}/280</span>
               <div className="flex gap-2">
                 <button type="button" className="btn btn-ghost btn-sm" onClick={() => setQuoteOpen(false)}>
@@ -429,7 +437,7 @@ export default function YapCard({ post, onLikeToggle, onBookmarkToggle, onDelete
             </div>
           </div>
         </dialog>
-      )}
+      ) : null}
     </>
   );
 }

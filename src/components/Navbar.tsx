@@ -1,19 +1,21 @@
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { useState, useEffect } from "react";
-import { Search, Home, User, Bookmark, Mail, Sun, Moon, ShieldAlert } from "lucide-react";
+import { Home, User, Bookmark, Mail, ShieldAlert, Star } from "lucide-react";
 import NotificationBell from "./NotificationBell";
+import { getUserById } from "../api/userApi";
+import type { User as UserType } from "../types";
+import AvatarFallback from "./AvatarFallback";
 
 function useTheme() {
-  const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark");
+  const [theme] = useState(() => localStorage.getItem("theme") || "dark");
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("theme", theme);
   }, [theme]);
 
-  const toggle = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
-  return { theme, toggle };
+  return { theme };
 }
 
 const navLinks = [
@@ -24,105 +26,140 @@ const navLinks = [
 
 export default function Navbar() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
-  const [search, setSearch] = useState("");
-  const { theme, toggle: toggleTheme } = useTheme();
+  const [profile, setProfile] = useState<UserType | null>(null);
+  useTheme();
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (search.trim()) {
-      navigate(`/search?q=${encodeURIComponent(search.trim())}`);
-      setSearch("");
-    }
-  };
+  useEffect(() => {
+    if (!user) return;
+    getUserById(Number(user.id))
+      .then((res) => setProfile(res.data))
+      .catch(() => {});
+  }, [user]);
+
+  if (!user) {
+    return (
+      <div className="border-b border-base-300">
+        <div className="relative flex h-[68px] w-full items-center justify-between px-[30px]">
+          <Link to="/" className="font-brand text-[1.5rem] font-extrabold tracking-tight text-base-content">
+            Yap<span className="text-primary">.</span>
+          </Link>
+
+          {location.pathname === "/" ? (
+            <div className="flex items-center gap-3">
+              <Link to="/login" className="btn btn-ghost h-10 rounded-[10px] border border-base-300 px-5 text-sm font-semibold text-base-content shadow-none">
+                Sign in
+              </Link>
+              <Link to="/register" className="btn btn-primary h-10 rounded-[10px] border-none px-5 text-sm font-semibold shadow-none">
+                Get started
+              </Link>
+            </div>
+          ) : (
+            <div className="w-24" />
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
-      {/* Top navbar */}
-      <div className="navbar bg-base-200/80 backdrop-blur-lg border-b border-base-300 sticky top-0 z-50">
-        <div className="flex-1">
-          <Link to="/" className="btn btn-ghost text-xl font-extrabold tracking-tight gap-0 text-base-content hover:text-primary transition-colors">
+      <div className="hidden md:flex w-[260px] shrink-0 flex-col border-r border-base-300 px-3">
+        <div className="sticky top-0 flex min-h-[100vh] flex-col py-5">
+          <Link to="/" className="font-brand mb-5 px-3 text-[1.75rem] font-extrabold leading-none tracking-tight text-base-content">
             Yap<span className="text-primary">.</span>
           </Link>
-        </div>
 
-        <div className="flex-none flex items-center gap-2">
-          {user && (
-            <form onSubmit={handleSearch} className="flex items-center">
-              <label className="input input-bordered bg-base-100/50 w-36 sm:w-48 md:w-80 flex items-center gap-2 focus-within:outline-primary">
-                <Search className="w-4 h-4 text-base-content/40 shrink-0" />
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  className="grow bg-transparent outline-none text-sm"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </label>
-            </form>
-          )}
-          <button
-            className="btn btn-ghost btn-circle hover:bg-base-300 transition-colors"
-            onClick={toggleTheme}
-            aria-label="Toggle theme"
-          >
-            {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-          </button>
+          <div className="space-y-0.5">
+            {navLinks.map(({ to, icon: Icon, label, match }) => {
+              const active = match(location.pathname);
+              return (
+                <Link
+                  key={to}
+                  to={to}
+                  className={`flex w-full items-center gap-[14px] rounded-[14px] px-[14px] py-[11px] text-[1rem] transition-colors duration-150 ${
+                    active
+                      ? "bg-primary/12 font-semibold text-primary"
+                      : "text-base-content/58 hover:bg-base-200/70 hover:text-base-content"
+                  }`}
+                >
+                  <Icon className="h-5 w-5" />
+                  <span>{label}</span>
+                </Link>
+              );
+            })}
+            <NotificationBell />
+            <Link
+              to="/premium"
+              className={`flex w-full items-center gap-[14px] rounded-[14px] px-[14px] py-[11px] text-[1rem] transition-colors duration-150 ${
+                location.pathname === "/premium"
+                  ? "bg-primary/12 font-semibold text-primary"
+                  : "text-base-content/58 hover:bg-base-200/70 hover:text-base-content"
+              }`}
+            >
+              <Star className="h-5 w-5" />
+              <span>Premium</span>
+            </Link>
+            {user.role === "Admin" && (
+              <Link
+                to="/admin/reports"
+                className={`flex w-full items-center gap-[14px] rounded-[14px] px-[14px] py-[11px] text-[1rem] transition-colors duration-150 ${
+                  location.pathname.startsWith("/admin/reports")
+                    ? "bg-primary/12 font-semibold text-primary"
+                    : "text-base-content/58 hover:bg-base-200/70 hover:text-base-content"
+                }`}
+              >
+                <ShieldAlert className="h-5 w-5" />
+                <span>Reports</span>
+              </Link>
+            )}
+            <Link
+              to={`/profile/${user.id}`}
+              className={`flex w-full items-center gap-[14px] rounded-[14px] px-[14px] py-[11px] text-[1rem] transition-colors duration-150 ${
+                location.pathname.startsWith("/profile")
+                  ? "bg-primary/12 font-semibold text-primary"
+                  : "text-base-content/58 hover:bg-base-200/70 hover:text-base-content"
+              }`}
+            >
+              <User className="h-5 w-5" />
+              <span>Profile</span>
+            </Link>
+          </div>
+
+          <div className="mt-auto w-full space-y-4 pt-4">
+            <Link
+              to="/"
+              className="flex w-full items-center justify-center gap-2 rounded-[14px] bg-primary px-5 py-[13px] text-[15px] font-bold text-primary-content transition-opacity duration-150 hover:opacity-88"
+            >
+              Yap something
+            </Link>
+
+            {profile && (
+              <Link
+                to={`/profile/${user.id}`}
+                className="flex items-center gap-3 rounded-[14px] px-3 py-[10px] transition-colors hover:bg-base-200/70"
+              >
+                <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full">
+                  {profile.profileImageUrl ? (
+                    <img src={profile.profileImageUrl} alt={profile.userName} className="h-full w-full object-cover" />
+                  ) : (
+                    <AvatarFallback label={profile.userName} className="text-[14px]" />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate text-[13px] font-bold text-base-content">
+                    {profile.displayName || profile.userName}
+                  </div>
+                  <div className="truncate text-[12px] text-base-content/50">@{profile.userName}</div>
+                </div>
+              </Link>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Left sidebar */}
-      {user && (
-        <div className="hidden md:flex fixed left-0 top-16 bottom-0 w-56 flex-col items-start gap-1 pt-4 pl-4 z-40 border-r border-base-300/50 bg-base-100">
-          {navLinks.map(({ to, icon: Icon, label, match }) => {
-            const active = match(location.pathname);
-            return (
-              <Link
-                key={to}
-                to={to}
-                className={`btn btn-ghost gap-3 w-12 md:w-full justify-center md:justify-start transition-all duration-200 rounded-xl ${
-                  active
-                    ? "bg-primary/12 text-primary font-semibold"
-                    : "text-base-content/70 hover:text-base-content hover:bg-base-200/70"
-                }`}
-              >
-                <Icon className="w-6 h-6" />
-                <span className="hidden md:inline text-lg">{label}</span>
-              </Link>
-            );
-          })}
-          <NotificationBell />
-          {user.role === "Admin" && (
-            <Link
-              to="/admin/reports"
-              className={`btn btn-ghost gap-3 w-12 md:w-full justify-center md:justify-start transition-all duration-200 rounded-xl ${
-                location.pathname.startsWith("/admin/reports")
-                  ? "bg-primary/12 text-primary font-semibold"
-                  : "text-base-content/70 hover:text-base-content hover:bg-base-200/70"
-              }`}
-            >
-              <ShieldAlert className="w-6 h-6" />
-              <span className="hidden md:inline text-lg">Reports</span>
-            </Link>
-          )}
-          <Link
-            to={`/profile/${user.id}`}
-            className={`btn btn-ghost gap-3 w-12 md:w-full justify-center md:justify-start transition-all duration-200 rounded-xl ${
-              location.pathname.startsWith("/profile")
-                ? "bg-primary/12 text-primary font-semibold"
-                : "text-base-content/70 hover:text-base-content hover:bg-base-200/70"
-            }`}
-          >
-            <User className="w-6 h-6" />
-            <span className="hidden md:inline text-lg">Profile</span>
-          </Link>
-        </div>
-      )}
-
       {/* Mobile bottom tabs */}
-      {user && (
-        <nav className="md:hidden fixed left-0 right-0 bottom-0 z-50 border-t border-base-300 bg-base-100/95 backdrop-blur-lg pb-[env(safe-area-inset-bottom)]">
+      <nav className="md:hidden fixed left-0 right-0 bottom-0 z-50 border-t border-base-300 bg-base-100/95 backdrop-blur-lg pb-[env(safe-area-inset-bottom)]">
           <div className="mx-auto flex h-16 max-w-xl items-stretch justify-around px-1">
             {navLinks.map(({ to, icon: Icon, label, match }) => {
               const active = match(location.pathname);
@@ -141,6 +178,17 @@ export default function Navbar() {
             })}
             <NotificationBell variant="bottom" />
             <Link
+              to="/premium"
+              className={`flex min-w-0 flex-1 flex-col items-center justify-center gap-1 py-2 text-xs transition-colors ${
+                location.pathname === "/premium"
+                  ? "text-primary font-semibold"
+                  : "text-base-content/60 hover:text-base-content"
+              }`}
+            >
+              <Star className="w-5 h-5" />
+              <span className="max-w-full truncate">Premium</span>
+            </Link>
+            <Link
               to={`/profile/${user.id}`}
               className={`flex min-w-0 flex-1 flex-col items-center justify-center gap-1 py-2 text-xs transition-colors ${
                 location.pathname.startsWith("/profile")
@@ -153,7 +201,6 @@ export default function Navbar() {
             </Link>
           </div>
         </nav>
-      )}
     </>
   );
 }

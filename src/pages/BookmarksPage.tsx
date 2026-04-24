@@ -37,9 +37,16 @@ export default function BookmarksPage() {
 
   return (
     <div className="animate-fade-in">
-      <h1 className="text-xl font-bold p-4 border-b border-base-300">Bookmarks</h1>
+      <div className="border-b border-base-300 px-4 pb-4 pt-3">
+        <h1 className="text-[1.5rem] font-bold tracking-tight">Bookmarks</h1>
+        {!loading && posts.length > 0 && (
+          <div className="mt-3 text-[15px] text-base-content/50">
+            {posts.length} saved yap{posts.length === 1 ? "" : "s"}
+          </div>
+        )}
+      </div>
       {loading ? (
-        <div className="mt-3"><YapSkeleton count={3} /></div>
+        <YapSkeleton count={3} />
       ) : posts.length === 0 ? (
         <EmptyState
           icon={<Bookmark className="w-12 h-12" />}
@@ -47,7 +54,7 @@ export default function BookmarksPage() {
           description="Save yaps to read them later."
         />
       ) : (
-        <div className="mt-3">
+        <div>
           {posts.map((post) => (
             <YapCard
               key={post.id}

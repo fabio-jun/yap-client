@@ -12,6 +12,7 @@ export interface Post {
   hasBookmarked: boolean;
   repostCount: number;
   hasReposted: boolean;
+  commentCount: number;
   isRepost: boolean;
   repostId?: number;
   repostedByUserId?: number;
@@ -36,9 +37,11 @@ export interface User {
   role: string;
   createdAt: string;
   profileImageUrl?: string;
+  coverImageUrl?: string;
   bio?: string;
   followersCount: number;
   followingCount: number;
+  postCount?: number;
 }
 
 export interface Comment {

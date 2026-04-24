@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { getAllPosts } from "../api/postApi";
 import { searchUsers } from "../api/userApi";
+import AvatarFallback from "../components/AvatarFallback";
 import YapCard from "../components/YapCard";
 import YapSkeleton from "../components/YapSkeleton";
 import EmptyState from "../components/EmptyState";
@@ -137,9 +138,7 @@ export default function SearchPage() {
                         {u.profileImageUrl ? (
                           <img src={u.profileImageUrl} alt={u.userName} />
                         ) : (
-                          <div className="bg-primary text-primary-content flex items-center justify-center text-sm font-bold w-full h-full">
-                            {u.userName.charAt(0).toUpperCase()}
-                          </div>
+                          <AvatarFallback label={u.userName} className="text-sm" />
                         )}
                       </div>
                     </div>

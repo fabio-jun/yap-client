@@ -2,7 +2,7 @@ import api from "./axiosInstance";
 
 export interface NotificationResponse {
   id: number;
-  type: "like" | "comment" | "follow";
+  type: "like" | "comment" | "follow" | "repost" | "reply";
   isRead: boolean;
   createdAt: string;
   actorId: number;

@@ -1,25 +1,58 @@
-import { useEffect, useState, useRef } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { Ban, BellOff, Camera, Flag, Info, Link2, Mail, MoreHorizontal, X } from "lucide-react";
+import toast from "react-hot-toast";
 import { getUserById, updateProfile } from "../api/userApi";
 import { getPostsByUser } from "../api/postApi";
-import { toggleFollow, getFollowers, getFollowing } from "../api/followApi";
-import { uploadFile } from "../api/uploadApi";
+import { getFollowers, getFollowing, toggleFollow } from "../api/followApi";
 import { blockUser, getBlockState, unblockUser } from "../api/blockApi";
+import { getUploadErrorMessage, SUPPORTED_IMAGE_ACCEPT, uploadFile } from "../api/uploadApi";
 import { useAuth } from "../hooks/useAuth";
-import { X, LogOut, Mail, Camera, Ban, Flag } from "lucide-react";
-import toast from "react-hot-toast";
-import YapCard from "../components/YapCard";
 import ConfirmModal from "../components/ConfirmModal";
 import ReportModal from "../components/ReportModal";
+import YapCard from "../components/YapCard";
+import AvatarFallback from "../components/AvatarFallback";
 import type { Post, User } from "../types";
+
+const profileTabs = ["Posts", "Replies", "Media", "Likes"] as const;
+type ProfileTab = (typeof profileTabs)[number];
+
+async function copyText(text: string) {
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  textarea.setAttribute("readonly", "");
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand("copy");
+  document.body.removeChild(textarea);
+}
+
+function profileLabel(profile: User) {
+  return profile.displayName || profile.userName.charAt(0).toUpperCase() + profile.userName.slice(1);
+}
 
 export default function ProfilePage() {
   const { id } = useParams();
   const { user: authUser, logout } = useAuth();
   const navigate = useNavigate();
+  const editFileRef = useRef<HTMLInputElement>(null);
+
   const [profile, setProfile] = useState<User | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [isSilenced, setIsSilenced] = useState(false);
+  const [activeTab, setActiveTab] = useState<ProfileTab>("Posts");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmBlock, setConfirmBlock] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [modalType, setModalType] = useState<"followers" | "following" | null>(null);
   const [modalUsers, setModalUsers] = useState<User[]>([]);
   const [modalLoading, setModalLoading] = useState(false);
@@ -29,18 +62,16 @@ export default function ProfilePage() {
   const [editImageUrl, setEditImageUrl] = useState("");
   const [editUploading, setEditUploading] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
-  const [isBlocked, setIsBlocked] = useState(false);
-  const [confirmBlock, setConfirmBlock] = useState(false);
-  const [reportOpen, setReportOpen] = useState(false);
-  const editFileRef = useRef<HTMLInputElement>(null);
 
   const userId = Number(id);
   const isOwnProfile = authUser && String(userId) === authUser.id;
 
   useEffect(() => {
     if (!userId) return;
+
     getUserById(userId).then((res) => setProfile(res.data));
     getPostsByUser(userId).then((res) => setPosts(res.data));
+
     if (authUser && String(userId) !== authUser.id) {
       getBlockState(userId)
         .then((res) => setIsBlocked(res.data.blocked))
@@ -65,8 +96,8 @@ export default function ProfilePage() {
     try {
       const uploadRes = await uploadFile(file);
       setEditImageUrl(uploadRes.data.url);
-    } catch {
-      toast.error("Failed to upload image.");
+    } catch (error) {
+      toast.error(getUploadErrorMessage(error, "Failed to upload image."));
     } finally {
       setEditUploading(false);
     }
@@ -107,16 +138,14 @@ export default function ProfilePage() {
   };
 
   const handleFollow = async () => {
-    if (isBlocked) return;
+    if (isBlocked || !profile) return;
     const res = await toggleFollow(userId);
     setIsFollowing(res.data.following);
+    setProfile({
+      ...profile,
+      followersCount: profile.followersCount + (res.data.following ? 1 : -1),
+    });
     toast(res.data.following ? "Followed!" : "Unfollowed");
-    if (profile) {
-      setProfile({
-        ...profile,
-        followersCount: profile.followersCount + (res.data.following ? 1 : -1),
-      });
-    }
   };
 
   const handleBlock = async () => {
@@ -146,11 +175,7 @@ export default function ProfilePage() {
   };
 
   const handleLikeToggle = (postId: number, liked: boolean, count: number) => {
-    setPosts((prev) =>
-      prev.map((p) =>
-        p.id === postId ? { ...p, hasLiked: liked, likeCount: count } : p
-      )
-    );
+    setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, hasLiked: liked, likeCount: count } : p)));
   };
 
   const handleDelete = (postId: number) => {
@@ -158,151 +183,228 @@ export default function ProfilePage() {
   };
 
   const handleRepostToggle = (postId: number, reposted: boolean, count: number) => {
-    setPosts((prev) =>
-      prev.map((p) =>
-        p.id === postId ? { ...p, hasReposted: reposted, repostCount: count } : p
-      )
-    );
+    setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, hasReposted: reposted, repostCount: count } : p)));
   };
 
-  if (!profile) return (
-    <div className="animate-pulse">
-      <div className="card bg-base-200 mb-4 overflow-hidden">
-        <div className="h-28 bg-gradient-to-r from-primary/20 to-secondary/20" />
-        <div className="card-body items-center text-center -mt-12">
-          <div className="w-24 h-24 rounded-full bg-base-300 ring-4 ring-base-200" />
-          <div className="h-6 w-32 bg-base-300 rounded mt-2" />
-          <div className="h-4 w-48 bg-base-300 rounded" />
-          <div className="flex gap-6 mt-2">
-            <div className="h-10 w-20 bg-base-300 rounded" />
-            <div className="h-10 w-20 bg-base-300 rounded" />
-            <div className="h-10 w-20 bg-base-300 rounded" />
+  const handleAboutAccount = () => {
+    if (!profile) return;
+    toast(`Joined ${new Date(profile.createdAt).toLocaleDateString()}`);
+    setMenuOpen(false);
+  };
+
+  const handleCopyProfileLink = async () => {
+    try {
+      await copyText(`${window.location.origin}/profile/${userId}`);
+      toast.success("Profile link copied.");
+    } catch {
+      toast.error("Could not copy profile link.");
+    } finally {
+      setMenuOpen(false);
+    }
+  };
+
+  const handleToggleSilence = () => {
+    setIsSilenced((current) => {
+      const next = !current;
+      toast(next ? `Silenced @${profile?.userName}` : `Unsilenced @${profile?.userName}`);
+      return next;
+    });
+    setMenuOpen(false);
+  };
+
+  if (!profile) {
+    return (
+      <div className="animate-pulse">
+        <div className="border-b border-base-300 px-4 pb-5 pt-3">
+          <div className="flex justify-center">
+            <div className="h-7 w-36 rounded-full bg-base-300" />
+          </div>
+          <div className="mt-3 h-40 rounded-none bg-base-300/70" />
+          <div className="relative px-1 pb-2 pt-8">
+            <div className="absolute -top-12 left-4 h-24 w-24 rounded-full bg-base-300 ring-4 ring-base-100" />
+            <div className="ml-auto flex w-fit gap-2">
+              <div className="h-10 w-28 rounded-2xl bg-base-300" />
+              <div className="h-10 w-24 rounded-2xl bg-base-300" />
+            </div>
+            <div className="mt-4 h-8 w-40 rounded bg-base-300" />
+            <div className="mt-2 h-5 w-24 rounded bg-base-300" />
+            <div className="mt-4 h-5 w-72 rounded bg-base-300" />
           </div>
         </div>
       </div>
-      <div className="space-y-3">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="card bg-base-200 p-4">
-            <div className="flex gap-3">
-              <div className="w-10 h-10 rounded-full bg-base-300" />
-              <div className="flex-1 space-y-2">
-                <div className="h-4 w-32 bg-base-300 rounded" />
-                <div className="h-4 w-full bg-base-300 rounded" />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+    );
+  }
+
+  const visiblePosts = activeTab === "Media" ? posts.filter((post) => Boolean(post.imageUrl)) : posts;
+  const emptyTabMessage =
+    activeTab === "Replies"
+      ? "Replies will appear here soon."
+      : activeTab === "Likes"
+        ? "Likes will appear here soon."
+        : activeTab === "Media"
+          ? "No media yet."
+          : "No yaps yet.";
 
   return (
     <div className="animate-fade-in">
-      <div className="card bg-base-200 mb-4 overflow-hidden">
-        {/* Gradient banner */}
-        <div className="h-28 bg-gradient-to-br from-primary/30 via-secondary/20 to-accent/10" />
+      <div className="border-b border-base-300 px-4 pb-0 pt-3">
+        <div className="-mx-4">
+          <div className="h-40 overflow-hidden bg-gradient-to-br from-primary/30 to-base-300">
+            {profile.coverImageUrl ? (
+              <img src={profile.coverImageUrl} alt="Cover" className="h-full w-full object-cover" />
+            ) : null}
+          </div>
+        </div>
 
-        <div className="card-body items-center text-center -mt-14">
-          <div className="avatar">
-            <div className="w-24 rounded-full ring-4 ring-base-200 shadow-lg">
+        <div className="relative px-1 pb-5 pt-8">
+          <div className="absolute -top-12 left-4 rounded-full bg-base-100 p-1">
+            <div className="h-24 w-24 overflow-hidden rounded-full ring-2 ring-base-100">
               {profile.profileImageUrl ? (
-                <img src={profile.profileImageUrl} alt={profile.userName} />
+                <img src={profile.profileImageUrl} alt={profile.userName} className="h-full w-full object-cover" />
               ) : (
-                <div className="bg-primary text-primary-content flex items-center justify-center text-3xl font-bold w-full h-full">
-                  {profile.userName.charAt(0).toUpperCase()}
-                </div>
+                <AvatarFallback label={profile.userName} className="text-[2.15rem]" />
               )}
             </div>
           </div>
 
-          <h2 className="text-2xl font-bold mt-2">
-            {profile.displayName || profile.userName.charAt(0).toUpperCase() + profile.userName.slice(1)}
-          </h2>
-          <p className="text-base-content/50 text-sm">@{profile.userName}</p>
-
-          {profile.bio && (
-            <p className="text-base-content/70 text-sm mt-1 max-w-sm leading-relaxed">{profile.bio}</p>
-          )}
-
-          <div className="flex gap-6 mt-3">
-            <button
-              className="flex flex-col items-center cursor-pointer hover:text-primary transition-colors"
-              onClick={() => openModal("followers")}
-            >
-              <span className="text-lg font-bold">{profile.followersCount}</span>
-              <span className="text-xs text-base-content/50">Followers</span>
-            </button>
-            <button
-              className="flex flex-col items-center cursor-pointer hover:text-primary transition-colors"
-              onClick={() => openModal("following")}
-            >
-              <span className="text-lg font-bold">{profile.followingCount}</span>
-              <span className="text-xs text-base-content/50">Following</span>
-            </button>
-            <div className="flex flex-col items-center">
-              <span className="text-lg font-bold">{posts.length}</span>
-              <span className="text-xs text-base-content/50">Yaps</span>
-            </div>
-          </div>
-
-          {isOwnProfile && (
-            <div className="flex gap-2 mt-3">
-              <button className="btn btn-outline btn-sm hover:btn-primary transition-all" onClick={openEditModal}>
+          {isOwnProfile ? (
+            <div className="flex justify-end gap-2">
+              <button className="btn btn-ghost h-10 min-h-0 rounded-2xl border border-base-300 px-5 text-base font-semibold" onClick={openEditModal}>
                 Edit profile
               </button>
               <button
-                className="btn btn-ghost btn-sm text-base-content/50 hover:text-error gap-1 transition-colors"
-                onClick={() => { logout(); navigate("/"); }}
+                className="btn btn-ghost h-10 min-h-0 rounded-2xl border border-base-300 px-5 text-base font-semibold text-error"
+                onClick={() => {
+                  logout();
+                  navigate("/");
+                }}
               >
-                <LogOut className="w-4 h-4" /> Logout
+                Log out
               </button>
             </div>
-          )}
-
-          {authUser && !isOwnProfile && (
-            <div className="flex flex-wrap justify-center gap-2 mt-3">
+          ) : authUser ? (
+            <div className="relative flex justify-end gap-2">
               <button
-                className={`btn btn-sm ${isFollowing ? "btn-outline" : "btn-primary shadow-lg shadow-primary/20"}`}
-                onClick={handleFollow}
-                disabled={isBlocked}
+                type="button"
+                className="btn btn-ghost h-10 min-h-0 rounded-2xl border border-base-300 px-3"
+                onClick={() => setMenuOpen((open) => !open)}
+                aria-expanded={menuOpen}
+                aria-label="More profile actions"
               >
-                {isFollowing ? "Unfollow" : "Follow"}
+                <MoreHorizontal className="h-4 w-4" />
               </button>
               <Link
                 to={`/messages/${userId}`}
-                className={`btn btn-ghost btn-sm gap-1 ${isBlocked ? "btn-disabled" : ""}`}
+                className={`btn btn-ghost h-10 min-h-0 rounded-2xl border border-base-300 px-3 ${isBlocked ? "btn-disabled" : ""}`}
               >
-                <Mail className="w-4 h-4" /> Message
+                <Mail className="h-4 w-4" />
               </Link>
               <button
                 type="button"
-                className="btn btn-ghost btn-sm gap-1 text-base-content/60 hover:text-error"
-                onClick={() => setReportOpen(true)}
+                className="btn btn-primary h-10 min-h-0 rounded-2xl border-none px-6 text-base font-bold shadow-none"
+                onClick={handleFollow}
+                disabled={isBlocked}
               >
-                <Flag className="w-4 h-4" /> Report
+                {isFollowing ? "Following" : "Follow"}
               </button>
-              <button
-                type="button"
-                className={`btn btn-sm gap-1 ${isBlocked ? "btn-outline" : "btn-ghost text-base-content/60 hover:text-error"}`}
-                onClick={() => (isBlocked ? handleUnblock() : setConfirmBlock(true))}
-              >
-                <Ban className="w-4 h-4" /> {isBlocked ? "Unblock" : "Block"}
-              </button>
+
+              {menuOpen ? (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                  <div className="absolute right-0 top-[calc(100%+0.5rem)] z-20 min-w-64 overflow-hidden rounded-2xl border border-base-300 bg-base-100 shadow-xl">
+                    <button type="button" className="flex w-full items-center gap-3 border-b border-base-300 px-4 py-3 text-left text-sm transition-colors hover:bg-base-200" onClick={handleAboutAccount}>
+                      <Info className="h-4 w-4" />
+                      About account
+                    </button>
+                    <button type="button" className="flex w-full items-center gap-3 border-b border-base-300 px-4 py-3 text-left text-sm transition-colors hover:bg-base-200" onClick={handleCopyProfileLink}>
+                      <Link2 className="h-4 w-4" />
+                      Copy link to profile
+                    </button>
+                    <button type="button" className="flex w-full items-center gap-3 border-b border-base-300 px-4 py-3 text-left text-sm transition-colors hover:bg-base-200" onClick={handleToggleSilence}>
+                      <BellOff className="h-4 w-4" />
+                      {isSilenced ? `Unsilence @${profile.userName}` : `Silence @${profile.userName}`}
+                    </button>
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-3 border-b border-base-300 px-4 py-3 text-left text-sm text-error transition-colors hover:bg-base-200"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        if (isBlocked) {
+                          handleUnblock();
+                        } else {
+                          setConfirmBlock(true);
+                        }
+                      }}
+                    >
+                      <Ban className="h-4 w-4" />
+                      {isBlocked ? `Unblock @${profile.userName}` : `Block @${profile.userName}`}
+                    </button>
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-error transition-colors hover:bg-base-200"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        setReportOpen(true);
+                      }}
+                    >
+                      <Flag className="h-4 w-4" />
+                      {`Report @${profile.userName}`}
+                    </button>
+                  </div>
+                </>
+              ) : null}
             </div>
-          )}
+          ) : null}
+
+          <div className="mt-4">
+            <h1 className="text-[2rem] font-bold tracking-tight text-base-content">{profileLabel(profile)}</h1>
+            <p className="text-[1.02rem] text-base-content/50">@{profile.userName}</p>
+            {profile.bio ? (
+              <p className="mt-3 max-w-[34rem] text-[1.05rem] leading-relaxed text-base-content/78">{profile.bio}</p>
+            ) : null}
+          </div>
+
+          <div className="mt-4 flex gap-6">
+            {[
+              { label: "Followers", count: profile.followersCount, action: () => openModal("followers") },
+              { label: "Following", count: profile.followingCount, action: () => openModal("following") },
+              { label: "Yaps", count: profile.postCount ?? posts.length },
+            ].map(({ label, count, action }) => (
+              <button key={label} type="button" className="text-left transition-colors hover:text-base-content" onClick={action}>
+                <span className="text-[1.1rem] font-bold text-base-content">{count}</span>
+                <span className="ml-1 text-[1.02rem] text-base-content/50">{label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex border-t border-base-300">
+          {profileTabs.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              className="relative flex-1 py-4 text-center text-[1.05rem] font-semibold transition-colors hover:bg-base-200/30"
+              onClick={() => setActiveTab(tab)}
+            >
+              <span className={activeTab === tab ? "text-base-content" : "text-base-content/50"}>{tab}</span>
+              {activeTab === tab ? <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary" /> : null}
+            </button>
+          ))}
         </div>
       </div>
 
       {isBlocked ? (
-        <div className="text-center py-10 px-4">
-          <Ban className="w-8 h-8 mx-auto mb-3 text-base-content/30" />
-          <p className="font-semibold">Blocked</p>
-          <p className="text-sm text-base-content/50 mt-1">Yaps from this account are hidden.</p>
+        <div className="px-4 py-12 text-center">
+          <Ban className="mx-auto mb-3 h-8 w-8 text-base-content/30" />
+          <p className="font-semibold text-base-content">Blocked</p>
+          <p className="mt-1 text-sm text-base-content/50">Yaps from this account are hidden.</p>
         </div>
-      ) : posts.length === 0 ? (
-        <p className="text-center text-base-content/40 py-8 text-sm">No yaps yet.</p>
+      ) : activeTab === "Replies" || activeTab === "Likes" ? (
+        <p className="px-4 py-10 text-center text-sm text-base-content/40">{emptyTabMessage}</p>
+      ) : visiblePosts.length === 0 ? (
+        <p className="px-4 py-10 text-center text-sm text-base-content/40">{emptyTabMessage}</p>
       ) : (
-        posts.map((post) => (
+        visiblePosts.map((post) => (
           <YapCard
             key={post.isRepost ? `repost-${post.repostId}` : `post-${post.id}`}
             post={post}
@@ -321,56 +423,40 @@ export default function ProfilePage() {
         onCancel={() => setConfirmBlock(false)}
       />
 
-      <ReportModal
-        open={reportOpen}
-        onClose={() => setReportOpen(false)}
-        reportedUserId={userId}
-      />
+      <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} reportedUserId={userId} />
 
-      {/* Edit Profile Modal */}
-      {editOpen && (
+      {editOpen ? (
         <dialog className="modal modal-open" onClick={() => setEditOpen(false)}>
           <div className="modal-box max-w-sm animate-scale-in" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-lg">Edit profile</h3>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-bold">Edit profile</h3>
               <button className="btn btn-sm btn-circle btn-ghost" onClick={() => setEditOpen(false)}>
-                <X className="w-4 h-4" />
+                <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="flex flex-col items-center mb-4">
-              <div
-                className="relative group cursor-pointer"
-                onClick={() => editFileRef.current?.click()}
-              >
+            <div className="mb-4 flex flex-col items-center">
+              <div className="group relative cursor-pointer" onClick={() => editFileRef.current?.click()}>
                 <div className="avatar">
                   <div className="w-20 rounded-full ring-2 ring-base-300">
                     {editImageUrl ? (
                       <img src={editImageUrl} alt="Profile" />
                     ) : (
-                      <div className="bg-primary text-primary-content flex items-center justify-center text-2xl font-bold w-full h-full">
-                        {profile.userName.charAt(0).toUpperCase()}
-                      </div>
+                      <AvatarFallback label={profile.userName} className="text-2xl" />
                     )}
                   </div>
                 </div>
-                <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Camera className="w-5 h-5 text-white" />
+                <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                  <Camera className="h-5 w-5 text-white" />
                 </div>
               </div>
-              {editUploading && (
-                <span className="text-xs text-base-content/50 mt-1 flex items-center gap-1">
-                  <span className="loading loading-spinner loading-xs"></span>
+              {editUploading ? (
+                <span className="mt-1 flex items-center gap-1 text-xs text-base-content/50">
+                  <span className="loading loading-spinner loading-xs" />
                   Uploading...
                 </span>
-              )}
-              <input
-                ref={editFileRef}
-                type="file"
-                accept="image/*"
-                onChange={handleEditImageChange}
-                className="hidden"
-              />
+              ) : null}
+              <input ref={editFileRef} type="file" accept={SUPPORTED_IMAGE_ACCEPT} onChange={handleEditImageChange} className="hidden" />
             </div>
 
             <div className="space-y-3">
@@ -378,7 +464,7 @@ export default function ProfilePage() {
                 <label className="text-sm font-semibold text-base-content/70">Name</label>
                 <input
                   type="text"
-                  className="input input-bordered w-full mt-1"
+                  className="input input-bordered mt-1 w-full"
                   maxLength={50}
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
@@ -388,7 +474,7 @@ export default function ProfilePage() {
               <div>
                 <label className="text-sm font-semibold text-base-content/70">Bio</label>
                 <textarea
-                  className="textarea textarea-bordered w-full mt-1"
+                  className="textarea textarea-bordered mt-1 w-full"
                   maxLength={160}
                   rows={3}
                   value={editBio}
@@ -400,34 +486,33 @@ export default function ProfilePage() {
             </div>
 
             <div className="modal-action">
-              <button className="btn btn-ghost btn-sm" onClick={() => setEditOpen(false)}>Cancel</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setEditOpen(false)}>
+                Cancel
+              </button>
               <button className="btn btn-primary btn-sm" onClick={handleEditSave} disabled={editSaving || editUploading}>
-                {editSaving ? <span className="loading loading-spinner loading-xs"></span> : "Save"}
+                {editSaving ? <span className="loading loading-spinner loading-xs" /> : "Save"}
               </button>
             </div>
           </div>
         </dialog>
-      )}
+      ) : null}
 
-      {/* Followers/Following Modal */}
-      {modalType && (
+      {modalType ? (
         <dialog className="modal modal-open" onClick={() => setModalType(null)}>
           <div className="modal-box animate-scale-in" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-lg">
-                {modalType === "followers" ? "Followers" : "Following"}
-              </h3>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-bold">{modalType === "followers" ? "Followers" : "Following"}</h3>
               <button className="btn btn-sm btn-circle btn-ghost" onClick={() => setModalType(null)}>
-                <X className="w-4 h-4" />
+                <X className="h-4 w-4" />
               </button>
             </div>
 
             {modalLoading ? (
               <div className="flex justify-center py-8">
-                <span className="loading loading-spinner loading-md text-primary"></span>
+                <span className="loading loading-spinner loading-md text-primary" />
               </div>
             ) : modalUsers.length === 0 ? (
-              <p className="text-center text-base-content/40 py-8 text-sm">
+              <p className="py-8 text-center text-sm text-base-content/40">
                 {modalType === "followers" ? "No followers yet." : "Not following anyone."}
               </p>
             ) : (
@@ -436,7 +521,7 @@ export default function ProfilePage() {
                   <Link
                     key={u.id}
                     to={`/profile/${u.id}`}
-                    className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-base-200 transition-colors"
+                    className="flex items-center gap-3 rounded-xl p-2.5 transition-colors hover:bg-base-200"
                     onClick={() => setModalType(null)}
                   >
                     <div className="avatar">
@@ -444,16 +529,12 @@ export default function ProfilePage() {
                         {u.profileImageUrl ? (
                           <img src={u.profileImageUrl} alt={u.userName} />
                         ) : (
-                          <div className="bg-primary text-primary-content flex items-center justify-center text-sm font-bold w-full h-full">
-                            {u.userName.charAt(0).toUpperCase()}
-                          </div>
+                          <AvatarFallback label={u.userName} className="text-sm" />
                         )}
                       </div>
                     </div>
                     <div>
-                      <span className="font-semibold block text-sm">
-                        {u.displayName || u.userName.charAt(0).toUpperCase() + u.userName.slice(1)}
-                      </span>
+                      <span className="block text-sm font-semibold">{profileLabel(u)}</span>
                       <span className="text-xs text-base-content/50">@{u.userName}</span>
                     </div>
                   </Link>
@@ -462,7 +543,7 @@ export default function ProfilePage() {
             )}
           </div>
         </dialog>
-      )}
+      ) : null}
     </div>
   );
 }

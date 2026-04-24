@@ -4,6 +4,7 @@ import { getConversation, sendMessage, deleteMessage } from "../api/messageApi";
 import { getUserById } from "../api/userApi";
 import { useAuth } from "../hooks/useAuth";
 import { ArrowLeft, Send, Trash2 } from "lucide-react";
+import AvatarFallback from "../components/AvatarFallback";
 import ConfirmModal from "../components/ConfirmModal";
 import type { DirectMessage, User } from "../types";
 
@@ -85,9 +86,7 @@ export default function ConversationPage() {
                 {otherUser.profileImageUrl ? (
                   <img src={otherUser.profileImageUrl} alt={otherUser.userName} />
                 ) : (
-                  <div className="bg-primary text-primary-content flex items-center justify-center text-sm font-bold w-full h-full">
-                    {otherUser.userName.charAt(0).toUpperCase()}
-                  </div>
+                  <AvatarFallback label={otherUser.userName} className="text-sm" />
                 )}
               </div>
             </div>

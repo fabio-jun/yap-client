@@ -10,22 +10,24 @@ html {
 }
 
 h1, h2, h3, h4, h5, h6,
-.text-xl, .text-2xl, .text-3xl, .text-4xl, .text-5xl, .text-6xl {
+.text-xl, .text-2xl, .text-3xl, .text-4xl, .text-5xl, .text-6xl,
+.font-brand {
   font-family: 'Bricolage Grotesque', system-ui, sans-serif;
   font-optical-sizing: auto;
 }
 
 /* Dark theme */
 [data-theme="dark"] {
-  --color-primary: oklch(65% 0.19 250) !important;
-  --color-primary-content: oklch(100% 0 0) !important;
+  --color-primary: #3b82f6 !important;
+  --color-primary-content: #ffffff !important;
   --color-secondary: oklch(70% 0.15 300) !important;
   --color-secondary-content: oklch(100% 0 0) !important;
   --color-accent: oklch(75% 0.15 180) !important;
   --color-accent-content: oklch(10% 0 0) !important;
-  --color-base-100: oklch(13% 0.005 260) !important;
-  --color-base-200: oklch(17% 0.008 260) !important;
-  --color-base-300: oklch(22% 0.01 260) !important;
+  --color-base-100: #000000 !important;
+  --color-base-200: #09090d !important;
+  --color-base-300: #1a1b20 !important;
+  --color-base-content: #f7f8fb !important;
 }
 
 /* Light theme */

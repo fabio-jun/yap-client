@@ -28,12 +28,12 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12 animate-fade-in-up">
-      <div className="w-full max-w-sm">
-        <div className="mb-10 text-center">
-          <span className="text-5xl font-extrabold tracking-tighter text-base-content">
+      <div className="w-full max-w-[27rem] rounded-[1.75rem] border border-base-300 bg-base-200 px-10 py-9 shadow-2xl shadow-black/20">
+        <div className="mb-9 text-center">
+          <span className="text-[3.35rem] font-extrabold tracking-tighter text-base-content">
             Yap<span className="text-primary">.</span>
           </span>
-          <p className="mt-3 text-base-content/50 text-sm">Welcome back. Sign in to continue.</p>
+          <p className="mt-3 text-[1.02rem] text-base-content/50">Welcome back. Sign in to continue.</p>
         </div>
 
         {error && <div className="alert alert-error text-sm mb-4">{error}</div>}
@@ -46,7 +46,7 @@ export default function LoginPage() {
             <input
               id="email"
               type="email"
-              className="input input-bordered w-full bg-base-200/50 focus:bg-base-100 transition-colors"
+              className="input input-bordered h-12 w-full rounded-2xl bg-base-200/50 focus:bg-base-100 transition-colors"
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -56,13 +56,18 @@ export default function LoginPage() {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-base-content/70" htmlFor="password">
-              Password
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-base-content/70" htmlFor="password">
+                Password
+              </label>
+              <a href="/forgot-password" className="text-xs text-primary hover:underline">
+                Forgot password?
+              </a>
+            </div>
             <input
               id="password"
               type="password"
-              className="input input-bordered w-full bg-base-200/50 focus:bg-base-100 transition-colors"
+              className="input input-bordered h-12 w-full rounded-2xl bg-base-200/50 focus:bg-base-100 transition-colors"
               placeholder="Your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -73,14 +78,14 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            className="btn btn-primary w-full mt-2 font-semibold"
+            className="btn btn-primary mt-2 h-12 w-full rounded-2xl border-none text-base font-bold shadow-none"
             disabled={loading}
           >
             {loading ? <span className="loading loading-spinner loading-sm" /> : "Sign in"}
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-base-content/50">
+        <p className="mt-6 text-center text-[1rem] text-base-content/50">
           No account?{" "}
           <Link to="/register" className="text-primary font-semibold hover:underline">
             Get started

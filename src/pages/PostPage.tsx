@@ -4,7 +4,8 @@ import { getPostById, deletePost } from "../api/postApi";
 import { toggleLike } from "../api/likeApi";
 import { getCommentsByPost, createComment, createReply, deleteComment } from "../api/commentApi";
 import { useAuth } from "../hooks/useAuth";
-import { Heart, Trash2, Send, Reply } from "lucide-react";
+import { Heart, Send, ArrowLeft, Bookmark, Repeat2, Share2, MoreHorizontal, MessageCircle } from "lucide-react";
+import AvatarFallback from "../components/AvatarFallback";
 import ConfirmModal from "../components/ConfirmModal";
 import type { Post, Comment } from "../types";
 import { renderContent } from "../utils/renderContent";
@@ -17,6 +18,17 @@ interface CommentItemProps {
   depth?: number;
   onReplyCreated: (parentId: number, reply: Comment) => void;
   onConfirmDelete: (commentId: number) => void;
+}
+
+function timeAgo(dateStr: string) {
+  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `${days}d`;
 }
 
 function CommentItem({ comment, postId, user, depth = 0, onReplyCreated, onConfirmDelete }: CommentItemProps) {
@@ -33,56 +45,72 @@ function CommentItem({ comment, postId, user, depth = 0, onReplyCreated, onConfi
   };
 
   return (
-    <div className={depth > 0 ? "ml-4 pl-3 border-l border-base-300" : ""}>
-      <div className="bg-base-300/50 rounded-xl p-3 transition-colors hover:bg-base-300">
-        <div className="flex justify-between items-center mb-1.5">
-          <Link to={`/profile/${comment.authorId}`} className="font-semibold text-sm hover:text-primary transition-colors">
-            @{comment.authorName}
+    <div className={depth > 0 ? "ml-10 border-l border-base-300 pl-6" : ""}>
+      <div className="border-b border-base-300 py-5">
+        <div className="flex items-start gap-4">
+          <Link to={`/profile/${comment.authorId}`} className="shrink-0">
+            <div className="h-12 w-12 overflow-hidden rounded-full">
+              <AvatarFallback label={comment.authorName} className="text-base" />
+            </div>
           </Link>
-          <span className="text-xs text-base-content/40">
-            {new Date(comment.createdAt).toLocaleDateString()}
-          </span>
-        </div>
-        <p className="text-sm leading-relaxed">{renderContent(comment.content, comment.mentionedUsers)}</p>
-        {user && (
-          <div className="flex gap-1 mt-1.5">
-            <button
-              type="button"
-              className="btn btn-ghost btn-xs text-base-content/40 hover:text-primary gap-1 transition-colors"
-              onClick={() => setReplyOpen((open) => !open)}
-            >
-              <Reply className="w-3 h-3" /> Reply
-            </button>
-            {(String(comment.authorId) === user.id || user.role === "Admin") && (
-              <button
-                type="button"
-                className="btn btn-ghost btn-xs text-base-content/30 hover:text-error gap-1 transition-colors"
-                onClick={() => onConfirmDelete(comment.id)}
-              >
-                <Trash2 className="w-3 h-3" /> Delete
-              </button>
+          <div className="min-w-0 flex-1">
+            <div className="mb-1.5 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <Link to={`/profile/${comment.authorId}`} className="text-[15px] font-bold tracking-tight transition-colors hover:text-primary">
+                    {comment.authorName.charAt(0).toUpperCase() + comment.authorName.slice(1)}
+                  </Link>
+                  <span className="text-[15px] text-base-content/46">@{comment.authorName}</span>
+                  <span className="text-[15px] text-base-content/34">{timeAgo(comment.createdAt)}</span>
+                </div>
+              </div>
+            </div>
+            <div className="text-[1.03rem] leading-[1.6] tracking-[-0.01em]">{renderContent(comment.content, comment.mentionedUsers)}</div>
+            {user && (
+              <div className="mt-3 flex items-center gap-5 text-base-content/42">
+                <button type="button" className="transition-colors hover:text-error" aria-label="Like comment">
+                  <Heart className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  className="transition-colors hover:text-primary"
+                  onClick={() => setReplyOpen((open) => !open)}
+                  aria-label="Reply to comment"
+                >
+                  <MessageCircle className="h-5 w-5" />
+                </button>
+                {(String(comment.authorId) === user.id || user.role === "Admin") && (
+                  <button
+                    type="button"
+                    className="text-[13px] font-medium transition-colors hover:text-error"
+                    onClick={() => onConfirmDelete(comment.id)}
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
+            )}
+
+            {replyOpen && (
+              <form onSubmit={handleReply} className="mt-4 flex gap-2">
+                <input
+                  type="text"
+                  className="input input-bordered input-sm h-10 flex-1 rounded-2xl bg-base-200"
+                  placeholder={`Reply to @${comment.authorName}`}
+                  value={replyContent}
+                  onChange={(e) => setReplyContent(e.target.value)}
+                />
+                <button type="submit" className="btn btn-primary btn-sm rounded-2xl border-none" disabled={!replyContent.trim()}>
+                  <Send className="h-4 w-4" />
+                </button>
+              </form>
             )}
           </div>
-        )}
-
-        {replyOpen && (
-          <form onSubmit={handleReply} className="flex gap-2 mt-2">
-            <input
-              type="text"
-              className="input input-bordered input-sm flex-1 bg-base-100/50"
-              placeholder={`Reply to @${comment.authorName}`}
-              value={replyContent}
-              onChange={(e) => setReplyContent(e.target.value)}
-            />
-            <button type="submit" className="btn btn-primary btn-sm" disabled={!replyContent.trim()}>
-              <Send className="w-4 h-4" />
-            </button>
-          </form>
-        )}
+        </div>
       </div>
 
       {comment.replies?.length > 0 && (
-        <div className="mt-2 space-y-2">
+        <div>
           {comment.replies.map((reply) => (
             <CommentItem
               key={reply.id}
@@ -163,26 +191,23 @@ export default function PostPage() {
 
   if (!post) {
     return (
-      <div className="space-y-4 animate-pulse">
-        <div className="card bg-base-200 p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-full bg-base-300" />
+      <div className="animate-pulse">
+        <div className="border-b border-base-300 px-4 py-4">
+          <div className="mb-3 h-7 w-28 rounded bg-base-300" />
+          <div className="h-3 w-24 rounded bg-base-300" />
+        </div>
+        <div className="border-b border-base-300 px-4 py-5">
+          <div className="mb-4 flex items-center gap-3">
+            <div className="h-12 w-12 rounded-full bg-base-300" />
             <div className="space-y-2">
-              <div className="h-4 w-28 bg-base-300 rounded" />
-              <div className="h-3 w-20 bg-base-300 rounded" />
+              <div className="h-4 w-28 rounded bg-base-300" />
+              <div className="h-3 w-20 rounded bg-base-300" />
             </div>
           </div>
           <div className="space-y-2">
-            <div className="h-5 w-full bg-base-300 rounded" />
-            <div className="h-5 w-2/3 bg-base-300 rounded" />
+            <div className="h-5 w-full rounded bg-base-300" />
+            <div className="h-5 w-2/3 rounded bg-base-300" />
           </div>
-          <div className="flex gap-3 mt-4">
-            <div className="h-8 w-16 bg-base-300 rounded" />
-          </div>
-        </div>
-        <div className="card bg-base-200 p-6">
-          <div className="h-5 w-24 bg-base-300 rounded mb-4" />
-          <div className="h-10 w-full bg-base-300 rounded" />
         </div>
       </div>
     );
@@ -192,108 +217,136 @@ export default function PostPage() {
 
   return (
     <div className="animate-fade-in">
-      <div className="card bg-base-200 mb-4">
-        <div className="card-body">
-          {/* Author header with avatar */}
-          <div className="flex items-center gap-3">
-            <Link to={`/profile/${post.authorId}`} className="shrink-0">
-              <div className="avatar">
-                <div className="w-12 h-12 rounded-full ring-2 ring-base-300 hover:ring-primary transition-all">
-                  {post.authorProfileImageUrl ? (
-                    <img src={post.authorProfileImageUrl} alt={post.authorName} />
-                  ) : (
-                    <div className="bg-primary text-primary-content flex items-center justify-center text-lg font-bold w-full h-full">
-                      {post.authorName.charAt(0).toUpperCase()}
-                    </div>
-                  )}
+      <div className="border-b border-base-300 px-6 pb-4 pt-3">
+        <div className="flex items-center gap-3">
+          <Link to="/" className="text-base-content/60 transition-colors hover:text-base-content">
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+          <h1 className="text-[1.5rem] font-bold tracking-tight">Thread</h1>
+        </div>
+      </div>
+
+      <div className="border-b border-base-300 px-6 py-6">
+        <div className="flex items-start gap-4">
+          <Link to={`/profile/${post.authorId}`} className="shrink-0">
+            <div className="h-12 w-12 overflow-hidden rounded-full">
+              <div className="h-full w-full rounded-full">
+                {post.authorProfileImageUrl ? (
+                  <img src={post.authorProfileImageUrl} alt={post.authorName} className="h-full w-full object-cover" />
+                ) : (
+                  <AvatarFallback label={post.authorName} className="text-base" />
+                )}
+              </div>
+            </div>
+          </Link>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start gap-3">
+              <div className="flex-1">
+                <Link to={`/profile/${post.authorId}`} className="text-[15px] font-bold tracking-tight transition-colors hover:text-primary">
+                  {post.authorName.charAt(0).toUpperCase() + post.authorName.slice(1)}
+                </Link>
+                <p className="text-[15px] text-base-content/50">@{post.authorName}</p>
+              </div>
+              {(isAuthorOrAdmin || user) && (
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-xs btn-circle text-base-content/30 transition-colors hover:text-base-content/65"
+                  onClick={() => isAuthorOrAdmin && setConfirmDelete("post")}
+                  disabled={!isAuthorOrAdmin}
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            <div className="mt-4 whitespace-pre-wrap text-[1.1rem] leading-[1.55] tracking-[-0.01em]">
+              {renderContent(post.content, post.mentionedUsers)}
+            </div>
+            <p className="mt-6 text-[14px] text-base-content/38">
+              {new Date(post.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} · {new Date(post.createdAt).toLocaleDateString()}
+            </p>
+
+            {post.imageUrl && (
+              isVideoUrl(post.imageUrl) ? (
+                <video src={post.imageUrl} className="mt-4 max-h-96 w-full rounded-[14px]" controls />
+              ) : (
+                <img src={post.imageUrl} alt="" className="mt-4 max-h-96 w-full rounded-[14px] object-contain" />
+              )
+            )}
+
+            <div className="mt-6 border-y border-base-300 py-4 text-[15px]">
+              <span className="font-bold text-base-content">{post.likeCount}</span> <span className="text-base-content/50">Likes</span>
+              <span className="ml-6 font-bold text-base-content">{post.repostCount}</span> <span className="text-base-content/50">Re-yaps</span>
+              <span className="ml-6 font-bold text-base-content">{comments.length}</span> <span className="text-base-content/50">Replies</span>
+            </div>
+            <div className="flex items-center py-4 text-base-content/45">
+              <button className="transition-colors hover:text-error" onClick={handleLike} disabled={!user}>
+                <Heart className="h-5 w-5" fill={post.hasLiked ? "currentColor" : "none"} />
+              </button>
+              <button className="ml-7 transition-colors hover:text-base-content/80">
+                <Repeat2 className="h-5 w-5" />
+              </button>
+              <button className="ml-7 transition-colors hover:text-primary">
+                <Bookmark className="h-5 w-5" />
+              </button>
+              <button className="ml-auto transition-colors hover:text-primary">
+                <Share2 className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {user && (
+        <div className="border-b border-base-300 px-6 py-5">
+          <form onSubmit={handleComment} className="rounded-[18px] border border-base-300 bg-base-200/40 px-5 py-4">
+            <div className="flex items-start gap-4">
+              <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full">
+                <AvatarFallback label={user.email} className="text-base" />
+              </div>
+              <div className="flex-1">
+                <textarea
+                  className="min-h-[48px] w-full resize-none bg-transparent text-[1.02rem] leading-relaxed outline-none placeholder:text-base-content/36"
+                  placeholder="Write a reply..."
+                  rows={1}
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                />
+                <div className="mt-3 flex justify-end">
+                  <button
+                    type="submit"
+                    className={`btn h-11 min-h-0 rounded-[14px] border-none px-6 text-base font-bold shadow-none ${newComment.trim() ? "btn-primary" : "bg-base-300 text-base-content/40"}`}
+                    disabled={!newComment.trim()}
+                  >
+                    Reply
+                  </button>
                 </div>
               </div>
-            </Link>
-            <div className="flex-1">
-              <Link to={`/profile/${post.authorId}`} className="font-bold hover:text-primary transition-colors">
-                {post.authorName.charAt(0).toUpperCase() + post.authorName.slice(1)}
-              </Link>
-              <p className="text-sm text-base-content/50">@{post.authorName}</p>
             </div>
-            <span className="text-sm text-base-content/50 tooltip tooltip-bottom cursor-default" data-tip={new Date(post.createdAt).toLocaleString()}>
-              {new Date(post.createdAt).toLocaleDateString()}
-            </span>
-          </div>
-
-          <p className="text-lg mt-3 whitespace-pre-wrap leading-relaxed">{renderContent(post.content, post.mentionedUsers)}</p>
-
-          {post.imageUrl && (
-            isVideoUrl(post.imageUrl) ? (
-              <video src={post.imageUrl} className="rounded-xl mt-3 max-h-96 w-full" controls />
-            ) : (
-              <img src={post.imageUrl} alt="" className="rounded-xl mt-3 max-h-96 w-full object-contain" />
-            )
-          )}
-
-          <div className="flex gap-3 mt-3 pt-3 border-t border-base-300">
-            <button
-              className={`btn btn-ghost btn-sm gap-1.5 transition-all duration-200 ${post.hasLiked ? "text-error" : "hover:text-error/70"}`}
-              onClick={handleLike}
-              disabled={!user}
-            >
-              <Heart className="w-4 h-4" fill={post.hasLiked ? "currentColor" : "none"} /> {post.likeCount}
-            </button>
-            {isAuthorOrAdmin && (
-              <button
-                className="btn btn-ghost btn-sm gap-1.5 text-base-content/40 hover:text-error transition-colors ml-auto"
-                onClick={() => setConfirmDelete("post")}
-              >
-                <Trash2 className="w-4 h-4" /> Delete
-              </button>
-            )}
-          </div>
+          </form>
         </div>
+      )}
+
+      <div className="px-6 pb-1 pt-5 text-xs font-bold uppercase tracking-[0.22em] text-base-content/36">
+        {comments.length} Replies
       </div>
 
-      <div className="card bg-base-200">
-        <div className="card-body">
-          <h3 className="font-bold text-lg mb-3">
-            Comments {comments.length > 0 && <span className="text-base-content/40 font-normal text-sm">({comments.length})</span>}
-          </h3>
-
-          {user && (
-            <form onSubmit={handleComment} className="flex gap-2 mb-4">
-              <input
-                type="text"
-                className="input input-bordered flex-1 bg-base-100/50"
-                placeholder="Write a comment..."
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-              />
-              <button
-                type="submit"
-                className="btn btn-primary btn-sm"
-                disabled={!newComment.trim()}
-                aria-label="Send comment"
-              >
-                <Send className="w-4 h-4" />
-              </button>
-            </form>
-          )}
-
-          {comments.length === 0 ? (
-            <p className="text-center text-base-content/40 py-6 text-sm">No comments yet. Be the first to reply!</p>
-          ) : (
-            <div className="space-y-3">
-              {comments.map((comment) => (
-                <CommentItem
-                  key={comment.id}
-                  comment={comment}
-                  postId={postId}
-                  user={user}
-                  onReplyCreated={handleReplyCreated}
-                  onConfirmDelete={(commentId) => setConfirmDelete(commentId)}
-                />
-              ))}
-            </div>
-          )}
+      {comments.length === 0 ? (
+        <p className="py-8 text-center text-sm text-base-content/40">No comments yet. Be the first to reply!</p>
+      ) : (
+        <div>
+          {comments.map((comment) => (
+            <CommentItem
+              key={comment.id}
+              comment={comment}
+              postId={postId}
+              user={user}
+              onReplyCreated={handleReplyCreated}
+              onConfirmDelete={(commentId) => setConfirmDelete(commentId)}
+            />
+          ))}
         </div>
-      </div>
+      )}
 
       <ConfirmModal
         open={confirmDelete === "post"}
